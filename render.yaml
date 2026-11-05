@@ -21,25 +21,3 @@ services:
         sync: false
       - key: OPENAI_MODEL
         value: gpt-4o-mini
-      - key: CHANNEL3_API_KEY
-        sync: false
-      - key: ELASTIC_URL
-        sync: false
-      - key: ZAPIER_HOOK_URL
-        sync: false
-      - key: KERNEL_API_KEY
-        sync: false
-      - key: ASTROPODS_TOKEN
-        sync: false
-      - key: ASTROPODS_ACCOUNT
-        sync: false
-
-  - type: cron
-    name: marlow-expire-holds
-    runtime: node
-    schedule: "*/15 * * * *"
-    buildCommand: npm ci
-    startCommand: node scripts/sweep.mjs
-    envVars:
-      - key: MARLOW_URL
-        sync: false

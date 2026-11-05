@@ -122,7 +122,7 @@ The server calls use the official **PayPal Server SDK** (`@paypal/paypal-server-
 | **Elastic** | Catalog search. Elasticsearch with `ELASTIC_URL` (`docker compose up`), embedded scoring otherwise | `src/server/elastic.ts` |
 | **Kernel** | Opens the top comparable listing in a cloud browser before the quote goes out, with `KERNEL_API_KEY` | `src/server/kernel.ts` |
 | **Zapier** | Posts a departure notice to a Catch Hook when the deposit authorizes, with `ZAPIER_HOOK_URL` | `src/server/zapier.ts` |
-| **Render** | `render.yaml` runs the web app and a cron that expires unpaid holds | `render.yaml`, `scripts/sweep.mjs` |
+| **Render** | Hosts the live demo from the `render.yaml` blueprint. `scripts/sweep.mjs` can run as a Render cron job to expire unpaid holds | `render.yaml`, `scripts/sweep.mjs` |
 | **Postman** | A collection for every API route | `postman/marlow.postman_collection.json` |
 | **Astropods** | The agent's deploy spec | `astropods.yml`, `AGENT.md` |
 
@@ -137,7 +137,7 @@ The server calls use the official **PayPal Server SDK** (`@paypal/paypal-server-
 
 ## Deploy
 
-**Render.** New → Blueprint → pick this repo. `render.yaml` creates the web service on the free plan. Add `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, and `OPENAI_API_KEY` in the dashboard. The optional cron job expires unpaid holds every 15 minutes.
+**Render.** New → Blueprint → pick this repo. `render.yaml` creates the web service on the free plan and asks for `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, and `OPENAI_API_KEY`. Other tool keys can be added in the service's Environment tab. To expire unpaid holds on a schedule, add a Render cron job that runs `node scripts/sweep.mjs` with `MARLOW_URL` set to the service URL.
 
 **Docker.** `docker build -t marlow . && docker run -p 3000:3000 --env-file .env.local marlow`
 
