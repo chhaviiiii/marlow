@@ -32,10 +32,9 @@ export default function PermissionsPage() {
 
   return (
     <div className="page">
-      <header className="top" style={{ paddingLeft: 0, paddingRight: 0 }}>
+      <header className="top">
         <div>
-          <p className="kicker">What the agent may do</p>
-          <h1>Rules and wiring</h1>
+          <h1>What the agent may do</h1>
           <p className="lede">
             Anyone can ask. Only a registered agent with signed consent can move PayPal. Card numbers are refused.
           </p>
@@ -44,8 +43,8 @@ export default function PermissionsPage() {
       </header>
       {deployNote && <p className="fine">{deployNote}</p>}
       <div className="rules">
-        <section className="card">
-          <p className="eyebrow">Shop policy</p>
+        <section className="sheet">
+          <h2>Shop policy</h2>
           <ul className="rule-list">
             {RULES.map(([name, text]) => (
               <li key={name}>
@@ -55,8 +54,8 @@ export default function PermissionsPage() {
             ))}
           </ul>
         </section>
-        <section className="card">
-          <p className="eyebrow">Live wiring</p>
+        <section className="sheet">
+          <h2>Live wiring</h2>
           <div className="stack">
             {shop.integrations.map((item) => (
               <div key={item.name}>
