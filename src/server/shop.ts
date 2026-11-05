@@ -1,6 +1,6 @@
 import { WEEK, initialEvents, initialLedger, initialTranscript, PIECES } from "@/lib/catalog";
 import { money, moneyString, percent, usd } from "@/lib/format";
-import { POLICY, quotePiece } from "@/lib/policy";
+import { parseCeiling, POLICY, quotePiece } from "@/lib/policy";
 import type {
   ActionResult,
   FloorEvent,
@@ -197,11 +197,6 @@ function commitDesk(shop: Shop, orderId: string) {
     },
   ];
   shop.events = [...shop.events.filter((event) => !event.id.startsWith("desk-")), ...deskEvents];
-}
-
-function parseCeiling(message: string) {
-  const match = message.match(/\$\s*(\d[\d,]*(?:\.\d{1,2})?)/);
-  return match ? Number(match[1].replace(/,/g, "")) : null;
 }
 
 function buyingIntent(message: string) {
