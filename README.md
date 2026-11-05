@@ -38,7 +38,7 @@ The Agent page opens with six demo options:
 
 | Option | What it shows |
 | --- | --- |
-| **Full sale**: walnut writing desk for Juniper | Seven checks pass, PayPal holds a $336 deposit, the floor moves, then capture and refund |
+| **Full sale**: walnut writing desk for Juniper | The checks pass, PayPal holds a $336 deposit, the floor moves, then capture and refund |
 | **Second buyer**: elm bench for Atelier | The same rules for a different agent and piece: a $288 deposit |
 | **Browse**: anything in white oak? | Plain words in, four pieces and prices out, no payment |
 | **Unregistered agent** | Drift asks for the desk. The mandate check refuses it and PayPal stays closed |
@@ -46,7 +46,7 @@ The Agent page opens with six demo options:
 | **Card number** | A pasted card number is masked and refused |
 
 1. Try the three guardrails first and watch the red checks.
-2. Click **Full sale**. Seven checks pass and the PayPal card shows a $336 deposit.
+2. Click **Full sale**. The checks pass and the PayPal card shows a $336 deposit. Channel3 and Kernel show grey chips until their keys are set, because they ran on sample data.
 4. Hold, capture, and refund the deposit from the card. Open **Floor** to see Thursday's mill change hands, and **Books** to see the ledger.
 
 With no keys, PayPal calls run in **rehearsal** with `RH-` ids, so the whole flow works offline. Add sandbox keys to call PayPal for real:
@@ -117,7 +117,7 @@ The server calls use the official **PayPal Server SDK** (`@paypal/paypal-server-
 | Card numbers refused and masked | Agents should present a token bound to a mandate. A raw card number is masked before it reaches the log and the sale stops. |
 | Authorize, then capture | A deposit hold commits the buyer while the shop builds. Capture waits for shipping, and refunds go back through the same PayPal payment. |
 | Money moves the schedule | An unpaid hold on Thursday's mill is released the moment a real PayPal authorization arrives. The floor shows what the money is doing. |
-| Visible checks | Every step the agent took shows as a chip under its answer, green or red, with the detail one click away. Judges and merchants can see why a sale went through. |
+| Visible checks | Every step the agent took shows as a chip under its answer, green or red, or grey for sample data, with the detail one click away. Judges and merchants can see why a sale went through. |
 | Runs with zero keys | Rehearsal mode lets anyone clone and click through the full flow. The same buttons call the PayPal sandbox once keys are present. |
 
 ## Sponsor tools

@@ -8,6 +8,7 @@ import {
   CreditCard,
   LoaderCircle,
   Lock,
+  Minus,
   Receipt,
   Search,
   ShieldCheck,
@@ -454,8 +455,8 @@ function Checks({ items }: { items: TranscriptEntry[] }) {
       <summary>
         <span className="chips">
           {items.map((item) => (
-            <span key={item.id} className={`chip ${item.ok === false ? "no" : ""}`}>
-              {item.ok === false ? <Ban size={12} /> : <Check size={12} strokeWidth={3} />}
+            <span key={item.id} className={`chip ${item.ok === false ? "no" : item.sample ? "sample" : ""}`}>
+              {item.ok === false ? <Ban size={12} /> : item.sample ? <Minus size={12} strokeWidth={3} /> : <Check size={12} strokeWidth={3} />}
               {item.tool ?? "Shop"}
             </span>
           ))}

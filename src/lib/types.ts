@@ -52,6 +52,7 @@ export type TranscriptEntry = {
   text: string;
   tool?: string;
   ok?: boolean;
+  sample?: boolean;
   via?: "model" | "rules";
 };
 

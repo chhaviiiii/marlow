@@ -339,7 +339,10 @@ export async function consider(message: string, echo = true): Promise<ActionResu
       say(shop, {
         role: "trace",
         tool: "Channel3",
-        text: `The market is ${usd(low)} to ${usd(high)}. ${usd(top.price)} holds.`,
+        sample: !market.live,
+        text: market.live
+          ? `The market is ${usd(low)} to ${usd(high)}. ${usd(top.price)} holds.`
+          : `Sample comps, not a live search: ${usd(low)} to ${usd(high)}. ${usd(top.price)} holds.`,
       });
     }
     say(shop, {
@@ -351,7 +354,8 @@ export async function consider(message: string, echo = true): Promise<ActionResu
     say(shop, {
       role: "trace",
       tool: "Kernel",
-      text: browser.live ? browser.note : "The comparable listing checks out. The price stands.",
+      sample: !browser.live,
+      text: browser.note,
     });
   }
 
