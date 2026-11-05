@@ -141,7 +141,7 @@ const refuse = (reason: string, claimedBy?: string): Gate => ({ ok: false, reaso
  * Decides one presented mandate. A valid mandate spends its nonce here,
  * whatever happens to the sale after, so one mandate is one attempt.
  */
-export function admit(token: string, now = Date.now()): Gate {
+export function admit(token: string, now = Date.now(), merchant = MERCHANT): Gate {
   const malformed = "The mandate is not a signed mandate this shop can read.";
   if (token.length > MAX_TOKEN_LENGTH) return refuse(malformed);
   const [header, payload, encodedSignature, extra] = token.split(".");
@@ -171,7 +171,7 @@ export function admit(token: string, now = Date.now()): Gate {
   if (!mandate.consent) {
     return refuse("There is no consent to pay. Intent without consent is not a mandate.", known.name);
   }
-  if (mandate.merchant !== MERCHANT) {
+  if (mandate.merchant !== merchant) {
     return refuse(`This mandate was signed for ${mandate.merchant}, not for this shop.`, known.name);
   }
   const expires = Date.parse(mandate.expiresAt);

@@ -3,6 +3,7 @@
 import { Lock, ShieldCheck } from "lucide-react";
 import dynamic from "next/dynamic";
 import { use, useCallback, useEffect, useState } from "react";
+import { PayoutLimit } from "@/components/payout-limit";
 import { usd } from "@/lib/format";
 
 const PayPalLive = dynamic(() => import("@/components/paypal-live").then((mod) => mod.PayPalLive), { ssr: false });
@@ -21,6 +22,8 @@ type Order = {
   paypal_order_id?: string;
   paypal_authorization_id?: string;
   paypalClientId: string | null;
+  merchantName: string;
+  createdShop: boolean;
 };
 
 export default function ApprovePage({ params }: { params: Promise<{ id: string }> }) {
@@ -59,13 +62,14 @@ export default function ApprovePage({ params }: { params: Promise<{ id: string }
     <div className="page">
       <header className="top" style={{ paddingLeft: 0, paddingRight: 0 }}>
         <div>
-          <p className="kicker">Field &amp; Grain · Approval</p>
+          <p className="kicker">{order.merchantName} · Approval</p>
           <h1>{usd(order.deposit ?? 0)} deposit</h1>
           <p className="lede">
             {order.buyer} asked for {order.piece}. Only you can approve this. Your agent cannot.
           </p>
         </div>
       </header>
+      {order.createdShop && <PayoutLimit merchant={order.merchantName} />}
       <section className="card">
         <div className="mandate">
           <ShieldCheck size={18} />

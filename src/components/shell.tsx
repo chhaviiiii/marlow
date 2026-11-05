@@ -11,12 +11,14 @@ const LINKS = [
   ["/books", "Books"],
   ["/catalog", "Catalog"],
   ["/permissions", "Rules"],
+  ["/setup", "Set up"],
 ];
 
 type Status = Pick<ShopSnapshot, "mode" | "llm" | "model">;
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
+  const merchantSide = path === "/setup" || path.startsWith("/m/");
   const [status, setStatus] = useState<Status | null>(null);
 
   useEffect(() => {
@@ -38,7 +40,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <div className="seal">M</div>
           <div>
             <strong>Marlow</strong>
-            <span>Field &amp; Grain</span>
+            <span>{merchantSide ? "Shops for AI agents" : "Field & Grain"}</span>
           </div>
         </Link>
         <nav className="nav">
@@ -61,9 +63,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
               </div>
             </>
           )}
-          <button className="ghost" type="button" onClick={reset}>
-            Reset the week
-          </button>
+          {!merchantSide && (
+            <button className="ghost" type="button" onClick={reset}>
+              Reset the week
+            </button>
+          )}
         </div>
       </header>
       <div className="stage">{children}</div>

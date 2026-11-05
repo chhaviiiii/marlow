@@ -71,10 +71,20 @@ export async function verifyWebhookSignature(body: string) {
   return json.verification_status === "SUCCESS";
 }
 
+const PAYPAL_TEXT_LIMIT = 127;
+
+/** PayPal refuses a purchase unit description over 127 characters. */
+export function depositDescription(pieceName: string, merchantName?: string) {
+  const text = merchantName ? `${merchantName}: ${pieceName} deposit` : `${pieceName} deposit`;
+  return text.slice(0, PAYPAL_TEXT_LIMIT);
+}
+
 export async function createDepositOrder(input: {
   amount: number;
   description: string;
   customId: string;
+  /** The name PayPal shows at approval. The money still goes to the one app behind these keys. */
+  brandName?: string;
 }) {
   const { orders } = controllers();
   const { result } = await orders.createOrder({
@@ -90,6 +100,7 @@ export async function createDepositOrder(input: {
           },
         },
       ],
+      ...(input.brandName ? { applicationContext: { brandName: input.brandName.slice(0, PAYPAL_TEXT_LIMIT) } } : {}),
     },
     paypalRequestId: crypto.randomUUID(),
     prefer: "return=representation",
@@ -147,6 +158,7 @@ export async function createBalanceInvoice(input: {
   amount: number;
   piece: string;
   buyer: string;
+  merchantName?: string;
 }) {
   const token = await accessToken();
   const merchantEmail = process.env.PAYPAL_MERCHANT_EMAIL || "merchant@fieldandgrain.test";
@@ -165,7 +177,9 @@ export async function createBalanceInvoice(input: {
         memo: contextSummary(),
       },
       invoicer: {
-        name: { given_name: "Field", surname: "Grain" },
+        ...(input.merchantName
+          ? { business_name: input.merchantName.slice(0, 300) }
+          : { name: { given_name: "Field", surname: "Grain" } }),
         email_address: merchantEmail,
       },
       primary_recipients: [

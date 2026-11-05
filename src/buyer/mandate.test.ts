@@ -71,6 +71,22 @@ test("a nonce cannot be spent again under a fresh signature", async () => {
   assert.equal(admit(await signMandate(juniper, { nonce })).ok, false);
 });
 
+test("a Field & Grain mandate is refused by a created shop and keeps its nonce", async () => {
+  const token = await signMandate(juniper);
+  const gate = admit(token, Date.now(), "m_0123456789abcdef");
+  assert.equal(gate.ok, false);
+  if (gate.ok) return;
+  assert.match(gate.reason, /signed for field-and-grain, not for this shop/);
+  assert.equal(admit(token).ok, true);
+});
+
+test("a mandate for one created shop is refused by another and by the demo shop", async () => {
+  const token = await signMandate(juniper, { merchant: "m_aaaaaaaaaaaaaaaa" });
+  assert.equal(admit(token, Date.now(), "m_bbbbbbbbbbbbbbbb").ok, false);
+  assert.equal(admit(token).ok, false);
+  assert.equal(admit(token, Date.now(), "m_aaaaaaaaaaaaaaaa").ok, true);
+});
+
 test("a bad signature does not spend the nonce", async () => {
   const token = await signMandate(juniper);
   const [header, payload] = token.split(".");

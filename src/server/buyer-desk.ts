@@ -3,7 +3,16 @@ import { PIECES } from "@/lib/catalog";
 import type { ShopSnapshot } from "@/lib/types";
 import { admit } from "./agent-pay";
 import type { BuyerDesk } from "./mcp";
-import { dropShop, getShop, hasShop, quoteForAgent, searchForAgent } from "./shop";
+import type { Merchant } from "./merchants";
+import {
+  dropShop,
+  getShop,
+  hasShop,
+  openMerchantShop,
+  quoteForAgent,
+  searchForAgent,
+  searchMerchantForAgent,
+} from "./shop";
 import { inShop } from "./visitor";
 
 /**
@@ -32,6 +41,7 @@ function orderView(shop: ShopSnapshot, orderId: string, origin: string) {
   return {
     status: STATUS[shop.phase],
     order_id: orderId,
+    merchant: shop.merchant.id ? shop.merchant.name : undefined,
     buyer: quote?.buyer,
     mandate_id: shop.admission?.mandateId,
     piece_id: quote?.pieceId,
@@ -58,32 +68,51 @@ export function orderStatus(orderId: string, origin: string) {
   return inShop(orderId, () => (hasShop() ? orderView(getShop(), orderId, origin) : null));
 }
 
-export const buyerDesk: BuyerDesk = {
-  search: searchForAgent,
+/** The same read, for an MCP endpoint. An order is visible only on the shop that took it. */
+function orderOnDesk(orderId: string, origin: string, merchantId?: string) {
+  if (!isOrderId(orderId)) return null;
+  return inShop(orderId, () => {
+    if (!hasShop()) return null;
+    const shop = getShop();
+    return shop.merchant.id === merchantId ? orderView(shop, orderId, origin) : null;
+  });
+}
 
-  async requestQuote(mandate, pieceId, origin) {
-    if (!PIECES.some((piece) => piece.id === pieceId)) {
-      return { refused: true, body: { status: "refused", reason: `There is no piece with the id ${pieceId}.` } };
-    }
-    const gate = admit(mandate);
-    if (!gate.ok) return { refused: true, body: { status: "refused", reason: gate.reason } };
+function deskFor(merchant?: Merchant): BuyerDesk {
+  return {
+    shop: merchant && { merchant_id: merchant.id, name: merchant.name, city: merchant.city },
 
-    const orderId = `ord_${randomUUID()}`;
-    return inShop(orderId, async () => {
-      const { shop } = await quoteForAgent(pieceId, gate);
-      if (shop.phase !== "quoted") {
-        const reason = shop.transcript.at(-1)?.text;
-        dropShop();
-        return { refused: true, body: { status: "refused", reason } };
+    search: async (query) => (merchant ? searchMerchantForAgent(merchant, query) : searchForAgent(query)),
+
+    async requestQuote(mandate, pieceId, origin) {
+      if (!(merchant?.pieces ?? PIECES).some((piece) => piece.id === pieceId)) {
+        return { refused: true, body: { status: "refused", reason: `There is no piece with the id ${pieceId}.` } };
       }
-      return { refused: false, body: orderView(shop, orderId, origin) };
-    });
-  },
+      const gate = admit(mandate, Date.now(), merchant?.id);
+      if (!gate.ok) return { refused: true, body: { status: "refused", reason: gate.reason } };
 
-  orderStatus(orderId, origin) {
-    const view = orderStatus(orderId, origin);
-    return view
-      ? { refused: false, body: view }
-      : { refused: true, body: { status: "refused", reason: "There is no order with that id." } };
-  },
-};
+      const orderId = `ord_${randomUUID()}`;
+      return inShop(orderId, async () => {
+        if (merchant) openMerchantShop(merchant);
+        const { shop } = await quoteForAgent(pieceId, gate);
+        if (shop.phase !== "quoted") {
+          const reason = shop.transcript.at(-1)?.text;
+          dropShop();
+          return { refused: true, body: { status: "refused", reason } };
+        }
+        return { refused: false, body: orderView(shop, orderId, origin) };
+      });
+    },
+
+    orderStatus(orderId, origin) {
+      const view = orderOnDesk(orderId, origin, merchant?.id);
+      return view
+        ? { refused: false, body: view }
+        : { refused: true, body: { status: "refused", reason: "There is no order with that id." } };
+    },
+  };
+}
+
+export const buyerDesk = deskFor();
+
+export const merchantDesk = (merchant: Merchant) => deskFor(merchant);
