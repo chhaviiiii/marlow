@@ -138,7 +138,7 @@ export function admit(presented: PresentedAgent): { ok: true; admission: Admissi
       mandateId,
       tokenRef: `tok_${presented.agentId}_${presented.signature.slice(0, 8)}`,
       rail: "paypal-authorize",
-      reason: `${known.name} is registered. Mandate ${mandateId} is signed for ${presented.city}, ceiling ${presented.ceiling.toFixed(0)}. PayPal may hold the deposit.`,
+      reason: `${known.name} is registered. Mandate ${mandateId} is signed for ${presented.city}, ceiling $${presented.ceiling.toLocaleString("en-US")}. PayPal may hold the deposit.`,
     },
   };
 }

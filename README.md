@@ -34,9 +34,19 @@ npm run dev
 
 Open http://localhost:3000.
 
-1. Click **An unregistered agent**. The mandate check turns red and PayPal stays closed.
-2. Click **A card number**. The number is masked and refused.
-3. Click **Walnut writing desk for Juniper**. Seven checks pass and the PayPal card shows a $336 deposit.
+The Agent page opens with six demo options:
+
+| Option | What it shows |
+| --- | --- |
+| **Full sale**: walnut writing desk for Juniper | Seven checks pass, PayPal holds a $336 deposit, the floor moves, then capture and refund |
+| **Second buyer**: elm bench for Atelier | The same rules for a different agent and piece: a $288 deposit |
+| **Browse**: anything in white oak? | Plain words in, four pieces and prices out, no payment |
+| **Unregistered agent** | Drift asks for the desk. The mandate check refuses it and PayPal stays closed |
+| **Over budget** | Northwind wants the $2,400 dining table with a $2,000 ceiling. Policy holds the price and PayPal stays closed |
+| **Card number** | A pasted card number is masked and refused |
+
+1. Try the three guardrails first and watch the red checks.
+2. Click **Full sale**. Seven checks pass and the PayPal card shows a $336 deposit.
 4. Hold, capture, and refund the deposit from the card. Open **Floor** to see Thursday's mill change hands, and **Books** to see the ledger.
 
 With no keys, PayPal calls run in **rehearsal** with `RH-` ids, so the whole flow works offline. Add sandbox keys to call PayPal for real:

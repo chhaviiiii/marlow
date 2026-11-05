@@ -28,33 +28,58 @@ const PHASES = [
   { id: "refunded", label: "Settled" },
 ] as const;
 
-const STARTS = [
+const SALES = [
   {
+    tag: "Full sale",
     pieceId: "desk-walnut",
     title: "Walnut writing desk",
-    buyer: "Juniper",
-    note: "Austin, before Friday, ceiling $880",
+    buyer: "for Juniper",
+    note: "Quote, PayPal hold, the floor moves, capture, refund",
+    chip: "Full sale: walnut desk",
     message: "Walnut writing desk for Juniper, Austin, before Friday, ceiling $880",
   },
   {
+    tag: "Second buyer",
     pieceId: "bench-elm",
     title: "Elm bench",
-    buyer: "Atelier",
-    note: "Studio order, any day this week",
-    message: "Quote the elm bench for Atelier",
+    buyer: "for Atelier",
+    note: "Same rules, a different agent and piece",
+    chip: "Second buyer: elm bench",
+    message: "Quote the elm bench for Atelier, ceiling $750",
   },
   {
+    tag: "Browse",
     pieceId: "stool-oak",
-    title: "Anything in white oak",
-    buyer: "Browse",
-    note: "See what the shop has",
+    title: "Anything in white oak?",
+    buyer: "No buyer named",
+    note: "Plain words in, pieces and prices out",
+    chip: "Browse: white oak",
     message: "What do you have in white oak?",
   },
 ] as const;
 
-const PROBES = [
-  { label: "An unregistered agent", message: "Drift wants the walnut writing desk, ceiling $900", icon: ShieldX },
-  { label: "A card number", message: "Just charge 4111 1111 1111 1111 for the walnut desk", icon: CreditCard },
+const GUARDS = [
+  {
+    title: "Unregistered agent",
+    stop: "The mandate refuses Drift",
+    chip: "Unregistered agent",
+    message: "Drift wants the walnut writing desk, ceiling $900",
+    icon: ShieldX,
+  },
+  {
+    title: "Over budget",
+    stop: "Policy holds the $2,400 price",
+    chip: "Over budget",
+    message: "Northwind wants the walnut dining table, ceiling $2,000",
+    icon: Receipt,
+  },
+  {
+    title: "Card number",
+    stop: "Masked and refused",
+    chip: "Card number",
+    message: "Just charge 4111 1111 1111 1111 for the walnut desk",
+    icon: CreditCard,
+  },
 ] as const;
 
 const BEAT: Record<(typeof PHASES)[number]["id"], string> = {
@@ -201,14 +226,14 @@ export function Desk() {
             <div className="composer">
               {!fresh && view.phase === "idle" && !busy && (
                 <div className="quick">
-                  {STARTS.map((start) => (
-                    <button key={start.title} type="button" className="chip-btn" onClick={() => ask(start.message)}>
-                      {start.buyer === "Browse" ? start.title : `${start.title}, ${start.buyer}`}
+                  {SALES.map((sale) => (
+                    <button key={sale.chip} type="button" className="chip-btn" onClick={() => ask(sale.message)}>
+                      {sale.chip}
                     </button>
                   ))}
-                  {PROBES.map((probe) => (
-                    <button key={probe.label} type="button" className="chip-btn probe" onClick={() => ask(probe.message)}>
-                      {probe.label}
+                  {GUARDS.map((guard) => (
+                    <button key={guard.chip} type="button" className="chip-btn probe" onClick={() => ask(guard.message)}>
+                      {guard.chip}
                     </button>
                   ))}
                 </div>
@@ -355,30 +380,41 @@ function Welcome({ shop, disabled, onAsk }: { shop: ShopSnapshot; disabled: bool
         Ask for any piece in plain words. Marlow prices it from shop policy, checks the buyer&apos;s mandate, and asks
         PayPal to hold the deposit.
       </p>
+      <p className="group-label">Run a sale</p>
       <div className="start-grid">
-        {STARTS.map((start) => {
-          const piece = shop.pieces.find((item) => item.id === start.pieceId);
+        {SALES.map((sale) => {
+          const piece = shop.pieces.find((item) => item.id === sale.pieceId);
+          const browse = sale.tag === "Browse";
           return (
-            <button key={start.title} type="button" className="start" disabled={disabled} onClick={() => onAsk(start.message)}>
-              <PieceMark id={start.pieceId} />
-              <b>{start.title}</b>
-              <span className="start-buyer">{start.buyer === "Browse" ? "Browse the shop" : `for ${start.buyer}`}</span>
-              <span className="start-note">{start.note}</span>
+            <button key={sale.chip} type="button" className="start" disabled={disabled} onClick={() => onAsk(sale.message)}>
+              <span className="start-top">
+                <PieceMark id={sale.pieceId} />
+                <span className={`start-tag ${browse ? "browse" : ""}`}>{sale.tag}</span>
+              </span>
+              <b>{sale.title}</b>
+              <span className="start-buyer">{sale.buyer}</span>
+              <span className="start-note">{sale.note}</span>
               <span className="start-price">
-                {start.buyer === "Browse" ? "Search" : piece ? usd(piece.price) : ""}
+                {browse ? "Search the catalog" : piece ? usd(piece.price) : ""}
                 <ArrowUpRight size={14} />
               </span>
             </button>
           );
         })}
       </div>
-      <div className="probes">
-        <span>Try to get past it</span>
-        {PROBES.map((probe) => {
-          const Icon = probe.icon;
+      <p className="group-label">Try to get past it</p>
+      <div className="guard-grid">
+        {GUARDS.map((guard) => {
+          const Icon = guard.icon;
           return (
-            <button key={probe.label} type="button" className="chip-btn probe" disabled={disabled} onClick={() => onAsk(probe.message)}>
-              <Icon size={14} /> {probe.label}
+            <button key={guard.chip} type="button" className="guard" disabled={disabled} onClick={() => onAsk(guard.message)}>
+              <span className="guard-icon">
+                <Icon size={16} />
+              </span>
+              <span>
+                <b>{guard.title}</b>
+                <small>{guard.stop}</small>
+              </span>
             </button>
           );
         })}

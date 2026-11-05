@@ -25,17 +25,17 @@ Target length: **2:45**. Record the screen with your voice. No music.
 
 ## 0:15 to 0:30 · What Marlow is
 
-**Screen:** point at the three starter cards, then the "How a sale works" panel on the right.
+**Screen:** point at the three "Run a sale" cards, the three "Try to get past it" cards, then the "How a sale works" panel on the right.
 
 **Say:**
 > This is Marlow, the shop agent for Field & Grain, a furniture workshop in Austin. Its buyers are agents. Policy sets every price, the model just repeats it. And PayPal only opens for a registered agent with a signed mandate.
 
 ## 0:30 to 0:55 · Try to get past it
 
-**Do:** click **An unregistered agent**. Let the chips finish. Then click **A card number**.
+**Do:** click **Unregistered agent**. Let the chips finish. Then click **Over budget**, then **Card number**.
 
 **Say:**
-> First, an agent the shop doesn't know. Marlow checks the catalog, the market, the floor, and the price, then the mandate check turns red, and PayPal stays closed. Now someone pastes a card number. It's masked before it reaches the log, and refused.
+> First, an agent the shop doesn't know. Marlow checks the catalog, the market, the floor, and the price, then the mandate check turns red, and PayPal stays closed. Next, Northwind is registered, but it wants a $2,400 table with a $2,000 ceiling. The mandate passes, policy holds the price, and PayPal stays closed again. Last, someone pastes a card number. It's masked before it reaches the log, and refused.
 
 ## 0:55 to 1:25 · A real buyer, in plain words
 
@@ -90,7 +90,7 @@ Stop recording. Trim to under 3:00.
 ## If something goes wrong on camera
 
 - The PayPal popup asks for a login you don't have: use the sandbox **personal** account. The business account belongs to the shop and cannot pay itself.
-- The model answers oddly: click the **Walnut writing desk for Juniper** starter instead of typing. It runs the same tools.
+- The model answers oddly: click the **Full sale** card (or the **Full sale: walnut desk** chip) instead of typing. It runs the same tools.
 - Anything else: **Reset the week** and start that section again. Cut it together in editing.
 
 ## Upload

@@ -2,6 +2,10 @@ function money(n: number) {
   return Math.round(n * 100) / 100;
 }
 
+function dollars(n: number) {
+  return `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 type PricedPiece = {
   name: string;
   price: number;
@@ -37,7 +41,7 @@ export function quotePiece(piece: PricedPiece, request: QuoteRequest): QuoteDeci
   if (piece.price > request.ceiling) {
     return {
       ok: false,
-      reason: `${piece.name} is ${piece.price} and the buyer's ceiling is ${request.ceiling}.`,
+      reason: `${piece.name} is ${dollars(piece.price)}, above the buyer's ceiling of ${dollars(request.ceiling)}.`,
     };
   }
   if (margin < POLICY.minMargin) {

@@ -200,8 +200,8 @@ function commitDesk(shop: Shop, orderId: string) {
 }
 
 function parseCeiling(message: string) {
-  const match = message.match(/\$\s*(\d+(?:\.\d{1,2})?)/);
-  return match ? Number(match[1]) : null;
+  const match = message.match(/\$\s*(\d[\d,]*(?:\.\d{1,2})?)/);
+  return match ? Number(match[1].replace(/,/g, "")) : null;
 }
 
 function buyingIntent(message: string) {
@@ -261,15 +261,18 @@ export async function consider(message: string, echo = true): Promise<ActionResu
   }
 
   if (!buyingIntent(text)) {
-    const list = hits
-      .slice(0, 4)
-      .map((piece) => `${piece.name}, ${usd(piece.price)}`)
-      .join(". ");
+    const shown = hits.slice(0, 4);
+    const list = shown.map((piece) => `${piece.name}, ${usd(piece.price)}`).join(". ");
+    const prices = shown.map((piece) => piece.price);
+    const range =
+      shown.length === 1
+        ? `${shown[0].name} at ${usd(prices[0])}`
+        : `${shown.length} pieces, from ${usd(Math.min(...prices))} to ${usd(Math.max(...prices))}`;
     say(shop, { role: "trace", tool: found.engine === "elastic" ? "Elastic" : "Catalog", text: `${list}.` });
     say(shop, {
       role: "clerk",
       who: "Agent",
-      text: "Say who is buying if you want PayPal to hold a deposit.",
+      text: `The shop has ${range}. Name a registered buyer, like Juniper, Northwind, or Atelier, and I will quote one.`,
     });
     bump(shop);
     return result(shop, before);
@@ -369,7 +372,9 @@ export async function consider(message: string, echo = true): Promise<ActionResu
   if (!decision.ok || !gate.ok) {
     const price = decision.ok
       ? `${top.name} is ${usd(decision.gross)}. A deposit would be ${usd(decision.deposit)}.`
-      : decision.reason;
+      : top.price > ceiling
+        ? `${decision.reason} Policy holds the price, so PayPal stays closed. Raise the ceiling to ${usd(top.price)} or ask for another piece.`
+        : decision.reason;
     say(shop, {
       role: "clerk",
       who: "Agent",
