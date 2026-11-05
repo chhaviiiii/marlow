@@ -1,6 +1,6 @@
 import type { FloorEvent, LedgerRow, Piece, TranscriptEntry } from "./types";
 
-export const WEEK = "Oct 5–10, 2026";
+export const WEEK = "Oct 5-10, 2026";
 
 export const PIECES: Piece[] = [
   {
@@ -103,7 +103,7 @@ export function initialEvents(): FloorEvent[] {
     {
       id: "table-mill",
       resourceId: "mill",
-      name: "Dining table — captured",
+      name: "Dining table: captured",
       start: "2026-10-05T08:00:00-05:00",
       end: "2026-10-06T16:00:00-05:00",
       status: "committed",
@@ -112,7 +112,7 @@ export function initialEvents(): FloorEvent[] {
     {
       id: "chair-bench",
       resourceId: "bench",
-      name: "Sling chair — authorized",
+      name: "Sling chair: authorized",
       start: "2026-10-06T09:00:00-05:00",
       end: "2026-10-07T15:00:00-05:00",
       status: "authorized",
@@ -121,7 +121,7 @@ export function initialEvents(): FloorEvent[] {
     {
       id: "table-finish",
       resourceId: "finish",
-      name: "Dining table — oil",
+      name: "Dining table: oil",
       start: "2026-10-07T08:00:00-05:00",
       end: "2026-10-07T18:00:00-05:00",
       status: "committed",
@@ -130,7 +130,7 @@ export function initialEvents(): FloorEvent[] {
     {
       id: "stool-mill",
       resourceId: "mill",
-      name: "Stool — hold, unpaid",
+      name: "Stool: hold, unpaid",
       start: "2026-10-08T08:00:00-05:00",
       end: "2026-10-08T18:00:00-05:00",
       status: "held",
@@ -139,7 +139,7 @@ export function initialEvents(): FloorEvent[] {
     {
       id: "stool-finish",
       resourceId: "finish",
-      name: "Stool — blocked",
+      name: "Stool: blocked",
       start: "2026-10-08T08:00:00-05:00",
       end: "2026-10-08T18:00:00-05:00",
       status: "blocked",

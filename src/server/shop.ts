@@ -163,15 +163,15 @@ function commitDesk(shop: Shop, orderId: string) {
   shop.events = shop.events.map((event) => {
     if (event.orderId !== "HIST-STOOL") return event;
     if (event.id === "stool-mill") {
-      return { ...event, status: "released", name: "Stool — hold released" };
+      return { ...event, status: "released", name: "Stool: hold released" };
     }
-    return { ...event, status: "released", name: "Stool — block lifted" };
+    return { ...event, status: "released", name: "Stool: block lifted" };
   });
   const deskEvents: FloorEvent[] = [
     {
       id: "desk-mill",
       resourceId: "mill",
-      name: "Writing desk — mill",
+      name: "Writing desk: mill",
       start: "2026-10-08T08:00:00-05:00",
       end: "2026-10-08T18:00:00-05:00",
       status: "committed",
@@ -180,7 +180,7 @@ function commitDesk(shop: Shop, orderId: string) {
     {
       id: "desk-finish",
       resourceId: "finish",
-      name: "Desk — oil",
+      name: "Desk: oil",
       start: "2026-10-08T12:00:00-05:00",
       end: "2026-10-08T18:00:00-05:00",
       status: "committed",
@@ -189,7 +189,7 @@ function commitDesk(shop: Shop, orderId: string) {
     {
       id: "desk-van",
       resourceId: "van",
-      name: "Desk — van",
+      name: "Desk: van",
       start: "2026-10-09T08:00:00-05:00",
       end: "2026-10-09T16:00:00-05:00",
       status: "committed",
@@ -431,7 +431,7 @@ export async function createPayPalOrder(): Promise<ActionResult & { orderId?: st
   try {
     const created = await createDepositOrder({
       amount: shop.quote.deposit,
-      description: `${shop.quote.pieceName} — deposit`,
+      description: `${shop.quote.pieceName} deposit`,
       customId: shop.quote.pieceId,
     });
     shop.paypal = { mode: "live", orderId: created.orderId, status: created.status };

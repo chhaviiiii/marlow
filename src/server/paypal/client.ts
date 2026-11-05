@@ -166,7 +166,7 @@ export async function createBalanceInvoice(input: {
       ],
       items: [
         {
-          name: `${input.piece} — balance on delivery`,
+          name: `${input.piece}, balance on delivery`,
           quantity: "1",
           unit_amount: { currency_code: "USD", value: moneyString(input.amount) },
         },

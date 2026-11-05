@@ -454,7 +454,7 @@ function PaymentSteps({ shop }: { shop: ShopSnapshot }) {
           <i>{step.done ? <Check size={12} strokeWidth={3} /> : null}</i>
           <span>
             <b>{step.label}</b>
-            <small>{step.id ?? "—"}</small>
+            <small>{step.id ?? "Pending"}</small>
           </span>
           <em>{usd(step.amount)}</em>
         </li>
