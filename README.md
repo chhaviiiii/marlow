@@ -5,7 +5,7 @@
 Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/).
 
 - **Demo video:** _add the YouTube link here_
-- **Live demo:** _add the Render URL here_, or run it locally in two minutes (below)
+- **Live demo:** https://marlow-ixup.onrender.com (PayPal sandbox), or run it locally in two minutes (below)
 
 ![A refused agent and an admitted one, with the PayPal deposit ready to approve](docs/screenshots/agent-quote.png)
 
