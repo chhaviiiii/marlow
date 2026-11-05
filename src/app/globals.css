@@ -1057,7 +1057,7 @@ a.floor-callout:hover { background: var(--manila-deep); }
 }
 
 .books > * { flex: 1; min-height: 0; }
-.books .ag-studio-ai-option-selector-label { opacity: 1; }
+.books button .ag-studio-ai-option-selector-label { color: var(--ink-soft); }
 
 .tiles { display: flex; margin: 0; border: 1px solid var(--ink); }
 
