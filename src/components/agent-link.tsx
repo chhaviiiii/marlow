@@ -29,8 +29,7 @@ function CopyBlock({ label, text, id }: { label: string; text: string; id: strin
           {copied ? <Check size={15} aria-hidden /> : <Copy size={15} aria-hidden />} Copy
         </button>
       </div>
-      {/* tabIndex lets a keyboard user scroll a long line. */}
-      <pre tabIndex={0} aria-labelledby={id}>{text}</pre>
+      <pre aria-labelledby={id}>{text}</pre>
       <p className="fine" role="status">
         {copied === true && `${label} copied.`}
         {copied === false && "Your browser blocked the copy. Select the text and copy it yourself."}

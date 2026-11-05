@@ -5,7 +5,7 @@ import {
   OrdersController,
   PaymentsController,
 } from "@paypal/paypal-server-sdk";
-import { moneyString } from "@/lib/format";
+import { moneyString, paypalText } from "@/lib/format";
 import { contextSummary } from "./context";
 
 export function paypalConfigured() {
@@ -71,14 +71,6 @@ export async function verifyWebhookSignature(body: string) {
   return json.verification_status === "SUCCESS";
 }
 
-const PAYPAL_TEXT_LIMIT = 127;
-
-/** PayPal refuses a purchase unit description over 127 characters. */
-export function depositDescription(pieceName: string, merchantName?: string) {
-  const text = merchantName ? `${merchantName}: ${pieceName} deposit` : `${pieceName} deposit`;
-  return text.slice(0, PAYPAL_TEXT_LIMIT);
-}
-
 export async function createDepositOrder(input: {
   amount: number;
   description: string;
@@ -100,7 +92,7 @@ export async function createDepositOrder(input: {
           },
         },
       ],
-      ...(input.brandName ? { applicationContext: { brandName: input.brandName.slice(0, PAYPAL_TEXT_LIMIT) } } : {}),
+      ...(input.brandName ? { applicationContext: { brandName: paypalText(input.brandName) } } : {}),
     },
     paypalRequestId: crypto.randomUUID(),
     prefer: "return=representation",

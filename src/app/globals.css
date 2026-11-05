@@ -1260,6 +1260,21 @@ a.floor-callout:hover { background: var(--manila-deep); }
 
 .file-line input { min-width: 0; max-width: 100%; }
 
+.file-line input::file-selector-button {
+  margin-right: 10px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fine code { font-family: var(--typed); }
+
 .row-list {
   margin: 4px 0 0;
   padding: 0;
@@ -1337,7 +1352,8 @@ a.floor-callout:hover { background: var(--manila-deep); }
 .copy-block pre {
   margin: 0;
   padding: 8px 10px;
-  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   border: 1px solid var(--rule-firm);
   border-radius: 2px;
   background: var(--paper-pale);

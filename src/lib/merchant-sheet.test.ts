@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { containsPan } from "../server/agent-pay.ts";
 import { checkSetup, MAX_CATALOG_BYTES, MAX_ROWS, parseCatalog, SAMPLE_SHOP } from "./merchant-sheet.ts";
+import { depositDescription } from "./format.ts";
 import { quotePiece } from "./policy.ts";
 
 const header = "name,price,cost,lead days\n";
@@ -178,4 +179,10 @@ test("a merchant's lead days count from today, not the demo week", () => {
 test("the price comes from the catalog, whatever the ceiling", () => {
   const decision = quotePiece({ ...bowl, cost: 50 }, { ceiling: 100_000, needBy }, policy, now);
   assert.equal(decision.ok && decision.gross, 100);
+});
+
+test("the merchant's name is on the PayPal order, inside PayPal's limit", () => {
+  assert.equal(depositDescription("Bowl", "Ember Road"), "Ember Road: Bowl deposit");
+  assert.equal(depositDescription("Writing desk, walnut"), "Writing desk, walnut deposit");
+  assert.equal(depositDescription("b".repeat(80), "a".repeat(60)).length, 127);
 });

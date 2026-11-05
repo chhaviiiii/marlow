@@ -33,6 +33,8 @@ if (!buyer) {
 const client = new Client({ name: `${agent}-buyer-agent`, version: "0.1.0" });
 await client.connect(new StreamableHTTPClientTransport(new URL(merchant ? `/api/mcp/${merchant}` : "/api/mcp", url)));
 
+const dollars = (amount) => `$${Number.isInteger(amount) ? amount : amount.toFixed(2)}`;
+
 async function call(name, args) {
   const reply = await client.callTool({ name, arguments: args });
   return { refused: Boolean(reply.isError), body: JSON.parse(reply.content[0].text) };
@@ -47,7 +49,7 @@ if (!piece) {
   console.error(`Nothing matches "${query}".`);
   process.exit(1);
 }
-console.log(`Found ${piece.name} (${piece.id}) at $${piece.price}.`);
+console.log(`Found ${piece.name} (${piece.id}) at ${dollars(piece.price)}.`);
 
 // A created shop runs on the wall clock, so the person's deadline does too.
 const terms = merchant
@@ -63,7 +65,9 @@ if (quote.refused) {
   console.log(`Refused: ${quote.body.reason}`);
   process.exit(2);
 }
-console.log(`Quoted. Deposit $${quote.body.deposit}, balance $${quote.body.balance_on_delivery}, PayPal ${quote.body.paypal_mode}.`);
+console.log(
+  `Quoted. Deposit ${dollars(quote.body.deposit)}, balance ${dollars(quote.body.balance_on_delivery)}, PayPal ${quote.body.paypal_mode}.`,
+);
 console.log(`Order ${quote.body.order_id}`);
 console.log(`A person must approve this. Send them: ${quote.body.approval_url}`);
 

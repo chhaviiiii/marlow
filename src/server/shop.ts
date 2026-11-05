@@ -1,5 +1,5 @@
 import { WEEK, initialEvents, initialLedger, initialTranscript, PIECES } from "@/lib/catalog";
-import { money, moneyString, percent, usd } from "@/lib/format";
+import { depositDescription, money, moneyString, percent, usd } from "@/lib/format";
 import { earliestDelivery, parseCeiling, POLICY, quotePiece } from "@/lib/policy";
 import type { Merchant } from "./merchants";
 import type {
@@ -23,7 +23,6 @@ import {
   captureAuthorization,
   createBalanceInvoice,
   createDepositOrder,
-  depositDescription,
   paypalConfigured,
   paypalMode,
   refundCapture,

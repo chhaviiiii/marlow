@@ -185,8 +185,9 @@ export function SetupForm() {
           <div className="field">
             <label htmlFor="catalog">Catalog</label>
             <p className="fine" id="catalog-hint">
-              Paste rows, or choose a file below. Columns: name, price, cost, lead days. Up to {MAX_ROWS} rows and 1 MB.
-              Cost stays private. Agents and the shop page never see it.
+              Paste rows, or choose a file below. Columns: name, price, cost, lead days. For example:{" "}
+              <code>Serving bowl,78,26,7</code>. Up to {MAX_ROWS} rows and 1 MB. Cost stays private. Agents and the
+              shop page never see it.
             </p>
             <textarea
               id="catalog"
@@ -195,7 +196,6 @@ export function SetupForm() {
               value={form.catalog}
               spellCheck={false}
               required
-              placeholder={SAMPLE_SHOP.catalog}
               aria-invalid={Boolean(errors.catalog)}
               aria-describedby={describe("catalog-hint", errors.catalog && "catalog-error")}
               onChange={(event) => set("catalog", event.target.value)}
