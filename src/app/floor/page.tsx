@@ -34,7 +34,7 @@ export default function FloorPage() {
           <CalendarClock size={20} />
           <span>
             <b>Thursday&apos;s mill is held for an unpaid stool.</b> Quote the walnut desk for Juniper and approve the
-            deposit in PayPal. This week rewrites itself.
+            deposit in PayPal to see the schedule change.
           </span>
           <ArrowUpRight size={18} />
         </Link>

@@ -186,6 +186,26 @@ Each accepted mandate opens its own shop, keyed by a random order id, so an MCP 
 | ![Floor](docs/screenshots/floor.png) | ![Books](docs/screenshots/books.png) |
 | Bryntum floor after the PayPal hold | AG Studio books over the PayPal ledger |
 
+## Set up your own shop
+
+Open `/setup`, enter a shop name and city, upload a catalog as CSV (name, price, cost, lead days), and set the deposit percent and minimum margin. Marlow creates a shop page at `/m/<id>` and an MCP link at `/api/mcp/<id>`. A bad row stops the whole sheet and names the line.
+
+To buy from a created shop:
+
+```bash
+MARLOW_URL=http://localhost:3000 MARLOW_MERCHANT=<id> node scripts/buyer-agent.mjs juniper
+```
+
+Each mandate names its shop in the `merchant` claim, so a mandate for one shop fails on another. The claim is the merchant id for a created shop and `field-and-grain` for the demo. Cost and the margin floor never reach the shop page or an agent.
+
+Limits of created shops:
+
+- They live in server memory, capped at 200 shops with the shop idle longest dropped first. A restart loses them. Each catalog is capped at 200 rows and 1 MB.
+- They accept the three demo buyer agents only, whose private keys are public demo keys.
+- The shop name appears on the PayPal order, but every deposit goes to Marlow's one sandbox app.
+- The merchant has no back office yet, so a held deposit cannot be captured or refunded from a created shop.
+- They use local search, not Elastic.
+
 ## Deploy
 
 Render: New → Blueprint → pick this repo. `render.yaml` creates the web service on the Starter plan (change `plan: starter` to `plan: free` to run it at no cost; free services sleep when idle) and asks for `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, and `OPENAI_API_KEY`. Other tool keys can be added in the service's Environment tab.

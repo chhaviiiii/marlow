@@ -1,6 +1,7 @@
 import { WEEK, initialEvents, initialLedger, initialTranscript, PIECES } from "@/lib/catalog";
-import { money, moneyString, percent, usd } from "@/lib/format";
+import { depositDescription, money, moneyString, percent, usd } from "@/lib/format";
 import { earliestDelivery, parseCeiling, POLICY, quotePiece } from "@/lib/policy";
+import type { Merchant } from "./merchants";
 import type {
   ActionResult,
   FloorEvent,
@@ -14,7 +15,7 @@ import type {
 import { agentNamedIn, containsPan, type Gate } from "./agent-pay";
 import { deployClerk } from "./astropods";
 import { findComps } from "./channel3";
-import { searchCatalog } from "./elastic";
+import { searchCatalog, searchLocal } from "./elastic";
 import { confirmListing } from "./kernel";
 import { contextSummary } from "./paypal/context";
 import {
@@ -117,19 +118,22 @@ function integrations(): Integration[] {
   ];
 }
 
-function seed(): Shop {
+function seed(merchant?: Merchant): Shop {
   return {
     version: 1,
     mode: paypalMode(),
     llm: Boolean(process.env.OPENAI_API_KEY),
     model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
     paypalClientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || process.env.PAYPAL_CLIENT_ID || null,
-    merchant: { name: "Field & Grain", place: "Austin", week: WEEK },
+    merchant: merchant
+      ? { id: merchant.id, name: merchant.name, place: merchant.city, week: "" }
+      : { name: "Field & Grain", place: "Austin", week: WEEK },
+    policy: merchant?.policy ?? POLICY,
     phase: "idle",
-    pieces: PIECES,
-    events: initialEvents(),
-    ledger: initialLedger(),
-    transcript: initialTranscript(),
+    pieces: merchant?.pieces ?? PIECES,
+    events: merchant ? [] : initialEvents(),
+    ledger: merchant ? [] : initialLedger(),
+    transcript: merchant ? [] : initialTranscript(),
     quote: null,
     admission: null,
     paypal: null,
@@ -183,6 +187,11 @@ export function getShop() {
 /** The shop a webhook belongs to. Never seeds one: a webhook has no visitor of its own. */
 export function visitorShop(visitor: string) {
   return shops().get(visitor);
+}
+
+/** Gives the current key a fresh shop for this merchant. An order runs inside it. */
+export function openMerchantShop(merchant: Merchant) {
+  shops().set(currentVisitor(), seed(merchant));
 }
 
 /** True when this key has a shop. Unlike getShop, it never creates one. */
@@ -336,8 +345,8 @@ async function offer(shop: Shop, before: number, top: Piece, gate: Gate, engine:
   const signed = gate.ok ? gate.mandate : null;
   const ceiling = signed?.ceiling ?? top.price;
   const city = signed?.city ?? "Austin";
-  const needBy = signed?.deliverBy ?? new Date(earliestDelivery(top)).toISOString();
-  const decision = quotePiece(top, { ceiling, needBy });
+  const needBy = signed?.deliverBy ?? new Date(earliestDelivery(top, shop.policy)).toISOString();
+  const decision = quotePiece(top, { ceiling, needBy }, shop.policy);
 
   const spoken = parseCeiling(text);
   const ignored =
@@ -387,7 +396,7 @@ async function offer(shop: Shop, before: number, top: Piece, gate: Gate, engine:
     tool: "Policy",
     ok: decision.ok,
     text: decision.ok
-      ? `${decision.reason} ${percent(decision.margin)} margin, above the ${POLICY.minMargin * 100}% floor.`
+      ? `${decision.reason} ${percent(decision.margin)} margin, above the ${percent(shop.policy.minMargin)} floor.`
       : decision.reason,
   });
   say(shop, {
@@ -480,8 +489,9 @@ export async function createPayPalOrder(): Promise<ActionResult & { orderId?: st
   try {
     const created = await createDepositOrder({
       amount: shop.quote.deposit,
-      description: `${shop.quote.pieceName} deposit`,
+      description: depositDescription(shop.quote.pieceName, shop.merchant.id ? shop.merchant.name : undefined),
       customId: shop.quote.pieceId,
+      brandName: shop.merchant.id ? shop.merchant.name : undefined,
     });
     shop.paypal = { mode: "live", orderId: created.orderId, status: created.status };
     rememberOrder(sharedBook(), currentVisitor(), created.orderId);
@@ -518,12 +528,15 @@ async function afterAuthorization(shop: Shop, paypal: PayPalRecord) {
   shop.ledger = [row, ...shop.ledger.filter((item) => item.id !== row.id)];
 
   let invoiceNote = "Balance invoice rehearsed.";
-  if (paypal.mode === "live") {
+  if (quote.balance <= 0) {
+    invoiceNote = "The deposit covers the full price.";
+  } else if (paypal.mode === "live") {
     try {
       const invoice = await createBalanceInvoice({
         amount: quote.balance,
         piece: quote.pieceName,
         buyer: quote.buyer,
+        merchantName: shop.merchant.id ? shop.merchant.name : undefined,
       });
       paypal.invoiceId = invoice.invoiceId;
       invoiceNote = `Balance invoice ${invoice.invoiceId} created for ${usd(quote.balance)}.`;
@@ -535,16 +548,19 @@ async function afterAuthorization(shop: Shop, paypal: PayPalRecord) {
     invoiceNote = `Balance invoice ${paypal.invoiceId} rehearsed for ${usd(quote.balance)}, due on delivery.`;
   }
 
-  const hook = await emitZapier({
-    event: "paypal.deposit.authorized",
-    merchant: "Field & Grain",
-    agent: quote.buyer,
-    piece: quote.pieceName,
-    amount: moneyString(quote.deposit),
-    currency: "USD",
-    paypalOrderId: paypal.orderId,
-    shipDate: "2026-10-09",
-  });
+  // The hook belongs to the demo shop, and its ship date is the demo's Friday.
+  const hook = shop.merchant.id
+    ? { delivered: false }
+    : await emitZapier({
+        event: "paypal.deposit.authorized",
+        merchant: "Field & Grain",
+        agent: quote.buyer,
+        piece: quote.pieceName,
+        amount: moneyString(quote.deposit),
+        currency: "USD",
+        paypalOrderId: paypal.orderId,
+        shipDate: "2026-10-09",
+      });
 
   const moved =
     quote.pieceId === "desk-walnut"
@@ -701,6 +717,16 @@ export async function searchForAgent(query: string) {
     price,
     leadDays,
     blurb,
+  }));
+}
+
+/** Local scoring only. The Elastic index is one shared index built from the demo catalog. */
+export function searchMerchantForAgent(merchant: Merchant, query: string) {
+  return searchLocal(merchant.pieces, query).map(({ piece: { id, name, price, leadDays } }) => ({
+    id,
+    name,
+    price,
+    leadDays,
   }));
 }
 

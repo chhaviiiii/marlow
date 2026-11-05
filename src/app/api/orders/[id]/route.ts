@@ -12,5 +12,7 @@ export const GET = forApprovalPage((id, request) => {
   return NextResponse.json({
     ...orderStatus(id, publicOrigin(request)),
     paypalClientId: shop.paypalClientId,
+    merchantName: shop.merchant.name,
+    createdShop: Boolean(shop.merchant.id),
   });
 });

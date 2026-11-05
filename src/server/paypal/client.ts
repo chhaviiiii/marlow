@@ -5,7 +5,7 @@ import {
   OrdersController,
   PaymentsController,
 } from "@paypal/paypal-server-sdk";
-import { moneyString } from "@/lib/format";
+import { moneyString, paypalText } from "@/lib/format";
 import { contextSummary } from "./context";
 
 export function paypalConfigured() {
@@ -75,6 +75,8 @@ export async function createDepositOrder(input: {
   amount: number;
   description: string;
   customId: string;
+  /** The name PayPal shows at approval. The money still goes to the one app behind these keys. */
+  brandName?: string;
 }) {
   const { orders } = controllers();
   const { result } = await orders.createOrder({
@@ -90,6 +92,7 @@ export async function createDepositOrder(input: {
           },
         },
       ],
+      ...(input.brandName ? { applicationContext: { brandName: paypalText(input.brandName) } } : {}),
     },
     paypalRequestId: crypto.randomUUID(),
     prefer: "return=representation",
@@ -147,6 +150,7 @@ export async function createBalanceInvoice(input: {
   amount: number;
   piece: string;
   buyer: string;
+  merchantName?: string;
 }) {
   const token = await accessToken();
   const merchantEmail = process.env.PAYPAL_MERCHANT_EMAIL || "merchant@fieldandgrain.test";
@@ -165,7 +169,9 @@ export async function createBalanceInvoice(input: {
         memo: contextSummary(),
       },
       invoicer: {
-        name: { given_name: "Field", surname: "Grain" },
+        ...(input.merchantName
+          ? { business_name: input.merchantName.slice(0, 300) }
+          : { name: { given_name: "Field", surname: "Grain" } }),
         email_address: merchantEmail,
       },
       primary_recipients: [

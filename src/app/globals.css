@@ -1210,3 +1210,160 @@ a.floor-callout:hover { background: var(--manila-deep); }
 
 .buying-as { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
 .buying-as select { min-height: 32px; padding: 4px 8px; border: 1px solid currentColor; border-radius: 2px; background: transparent; font: inherit; }
+
+/* Merchant setup. Printed labels, typed entries, ruled sheets. */
+
+.setup, .shop-sheets { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+
+.setup-main, .setup-side, .shop-connect { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+.sheet-title {
+  margin: 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--ink);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+.field > label, .file-line label { font-size: 14px; font-weight: 700; }
+
+.field input:not([type="file"]), .field textarea {
+  width: 100%;
+  border: 1px solid var(--rule-firm);
+  border-radius: 2px;
+  background: var(--paper-pale);
+  padding: 0 12px;
+  font-family: var(--typed);
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.field input:not([type="file"]) { height: 42px; }
+
+.field textarea { padding: 10px 12px; line-height: 1.4; resize: vertical; }
+
+.field textarea::placeholder { color: var(--ink-soft); opacity: 1; }
+
+.field input:hover, .field textarea:hover { border-color: var(--ink); }
+
+.field input:focus-visible, .field textarea:focus-visible { background: #fff; outline-offset: 0; }
+
+.field [aria-invalid="true"] { border-color: var(--refuse); }
+
+.field-error { margin: 0; color: var(--refuse); font-size: 14px; font-weight: 600; }
+
+.file-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 4px; font-size: 14px; }
+
+.file-line input { min-width: 0; max-width: 100%; }
+
+.file-line input::file-selector-button {
+  margin-right: 10px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fine code { font-family: var(--typed); }
+
+.row-list {
+  margin: 4px 0 0;
+  padding: 0;
+  max-height: 220px;
+  overflow: auto;
+  list-style: none;
+  border-top: 1px solid var(--rule-firm);
+  font-size: 14px;
+}
+
+.row-list li { padding: 5px 0; border-bottom: 1px solid var(--rule); overflow-wrap: anywhere; }
+
+.row-list span { font-family: var(--typed); font-weight: 700; white-space: nowrap; }
+
+.row-list.errors span { color: var(--refuse); }
+
+.limit {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 2px;
+  background: var(--manila);
+  color: var(--manila-ink);
+  box-shadow: 0 1px 2px rgba(20, 32, 26, 0.24);
+  font-size: 14px;
+}
+
+.limit b { font-weight: 800; }
+
+.setup-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.setup-actions .primary, .setup-actions .secondary { min-height: 44px; padding: 0 18px; font-weight: 700; }
+
+.another { align-self: flex-start; min-height: 44px; margin-top: 14px; padding: 0 18px; font-weight: 700; }
+
+.plain-link { text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+
+.top h1:focus { outline: none; }
+
+.table-scroll { overflow-x: auto; }
+
+.shop-book { width: 100%; border-collapse: collapse; }
+
+.shop-book th, .shop-book td { padding: 8px 12px 8px 0; border-bottom: 1px solid var(--rule); text-align: left; font-size: 15px; }
+
+.shop-book thead th { border-bottom: 1px solid var(--ink); font-size: 13px; font-weight: 700; white-space: nowrap; }
+
+.shop-book tbody th { font-weight: 700; overflow-wrap: anywhere; }
+
+.shop-book .amount { padding-right: 0; padding-left: 12px; text-align: right; font-family: var(--typed); white-space: nowrap; }
+
+.shop-book thead .amount { font-family: inherit; }
+
+.receipt { margin: 0; }
+
+.receipt div { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--rule); }
+
+.receipt dt { font-weight: 700; }
+
+.receipt dd { margin: 0; font-family: var(--typed); overflow-wrap: anywhere; }
+
+.notes-title { margin: 14px 0 0; font-size: 15px; font-weight: 800; }
+
+#your-shop ~ .limit { margin-top: 14px; }
+
+.agent-link { display: flex; flex-direction: column; gap: 12px; }
+
+.copy-block { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+.copy-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+.copy-head h3 { margin: 0; font-size: 14px; font-weight: 700; }
+
+.copy-head .secondary { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 0 12px; font-weight: 600; }
+
+.copy-block pre {
+  margin: 0;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--rule-firm);
+  border-radius: 2px;
+  background: var(--paper-pale);
+  font-family: var(--typed);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+@media (max-width: 860px) {
+  .setup, .shop-sheets { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .field-row { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .setup-actions .primary, .setup-actions .secondary { flex: 1 1 100%; }
+}

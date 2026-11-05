@@ -1,3 +1,5 @@
+import type { ShopPolicy } from "./types";
+
 function money(n: number) {
   return Math.round(n * 100) / 100;
 }
@@ -15,10 +17,10 @@ type PricedPiece = {
 };
 
 /** The maker's rule. The model may propose. Only this function may price. */
-export const POLICY = {
+export const POLICY: ShopPolicy = {
   depositRatio: 0.4,
   minMargin: 0.08,
-  captureOn: "ship" as const,
+  captureOn: "ship",
   currency: "USD",
 };
 
@@ -28,7 +30,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** Friday's van, once a PayPal hold gives the desk Thursday's mill. */
 const PROMISED: Record<string, string> = { "desk-walnut": "2026-10-09T12:00:00-05:00" };
 
-export function earliestDelivery(piece: PricedPiece) {
+export function earliestDelivery(piece: PricedPiece, policy: ShopPolicy = POLICY, now = Date.now()) {
+  if (policy.calendar === "live") return now + piece.leadDays * DAY_MS;
   const promised = PROMISED[piece.id];
   return promised ? Date.parse(promised) : Date.parse(WEEK_START) + piece.leadDays * DAY_MS;
 }
@@ -63,7 +66,15 @@ export function parseCeiling(message: string) {
   return match ? Number(match[1].replace(/,/g, "")) : null;
 }
 
-export function quotePiece(piece: PricedPiece, request: QuoteRequest): QuoteDecision {
+const asPercent = (ratio: number) => Math.round(ratio * 1000) / 10;
+
+/** Pass a merchant's policy to price for that merchant. The default is the demo shop's. */
+export function quotePiece(
+  piece: PricedPiece,
+  request: QuoteRequest,
+  policy: ShopPolicy = POLICY,
+  now = Date.now(),
+): QuoteDecision {
   const margin = (piece.price - piece.cost) / piece.price;
   if (piece.price > request.ceiling) {
     return {
@@ -71,20 +82,20 @@ export function quotePiece(piece: PricedPiece, request: QuoteRequest): QuoteDeci
       reason: `${piece.name} is ${dollars(piece.price)}, above the buyer's ceiling of ${dollars(request.ceiling)}.`,
     };
   }
-  const arrives = earliestDelivery(piece);
+  const arrives = earliestDelivery(piece, policy, now);
   if (arrives > Date.parse(request.needBy)) {
     return {
       ok: false,
       reason: `${piece.name} cannot arrive before ${day(arrives)}, after the buyer's signed deadline of ${day(Date.parse(request.needBy))}.`,
     };
   }
-  if (margin < POLICY.minMargin) {
+  if (margin < policy.minMargin) {
     return {
       ok: false,
-      reason: `Margin would be under the ${POLICY.minMargin * 100}% floor.`,
+      reason: `Margin would be under the ${asPercent(policy.minMargin)}% floor.`,
     };
   }
-  const deposit = money(piece.price * POLICY.depositRatio);
+  const deposit = money(piece.price * policy.depositRatio);
   const balance = money(piece.price - deposit);
   return {
     ok: true,
@@ -92,6 +103,6 @@ export function quotePiece(piece: PricedPiece, request: QuoteRequest): QuoteDeci
     deposit,
     balance,
     margin,
-    reason: `Deposit ${Math.round(POLICY.depositRatio * 100)}%. Margin passes. Capture on ${POLICY.captureOn}.`,
+    reason: `Deposit ${asPercent(policy.depositRatio)}%. Margin passes. Capture on ${policy.captureOn}.`,
   };
 }
