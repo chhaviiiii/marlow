@@ -57,6 +57,20 @@ async function accessToken() {
   return json.access_token;
 }
 
+/** Returns false when PayPal refuses the signature. Throws when PayPal cannot answer. */
+export async function verifyWebhookSignature(body: string) {
+  const token = await accessToken();
+  const res = await fetch(`${apiBase()}/v1/notifications/verify-webhook-signature`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body,
+  });
+  if (res.status >= 500) throw new Error(`PayPal verify failed (${res.status}).`);
+  if (!res.ok) return false;
+  const json = (await res.json()) as { verification_status?: string };
+  return json.verification_status === "SUCCESS";
+}
+
 export async function createDepositOrder(input: {
   amount: number;
   description: string;

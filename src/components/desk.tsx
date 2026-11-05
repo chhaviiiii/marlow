@@ -505,6 +505,7 @@ function PaymentSteps({ shop }: { shop: ShopSnapshot }) {
             Balance invoice <b>{paypal.invoiceId}</b>
           </span>
         ) : null}
+        {paypal.webhook ? <span>{paypal.webhook.note}</span> : null}
       </li>
     </ol>
   );

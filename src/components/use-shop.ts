@@ -32,6 +32,18 @@ export function useShop() {
     };
   }, []);
 
+  // A webhook changes the shop with no browser request, so watch an open live payment.
+  const watching = shop?.mode === "live" && Boolean(shop.paypal);
+  useEffect(() => {
+    if (!watching) return;
+    const timer = window.setInterval(() => {
+      load()
+        .then((data) => setShop((current) => (current && data.version > current.version ? data : current)))
+        .catch(() => {});
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [watching]);
+
   async function act(url: string, body?: unknown) {
     const data = await postAction(url, body);
     setShop(data.shop);

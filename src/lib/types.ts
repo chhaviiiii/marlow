@@ -94,6 +94,12 @@ export type PayPalRecord = {
   refundId?: string;
   invoiceId?: string;
   status: string;
+  /** The last thing PayPal confirmed by signed webhook. */
+  webhook?: { note: string; event: string; at: string };
+  /** Refund amounts by PayPal refund id, so none is booked twice. */
+  refunds?: Record<string, number>;
+  /** PayPal dropped this hold and the floor let go of it. */
+  released?: boolean;
 };
 
 export type Integration = {

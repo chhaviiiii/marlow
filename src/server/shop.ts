@@ -1,5 +1,5 @@
 import { WEEK, initialEvents, initialLedger, initialTranscript, PIECES } from "@/lib/catalog";
-import { money, moneyString, percent, usd } from "@/lib/format";
+import { moneyString, percent, usd } from "@/lib/format";
 import { parseCeiling, POLICY, quotePiece } from "@/lib/policy";
 import type {
   ActionResult,
@@ -26,6 +26,14 @@ import {
   paypalMode,
   refundCapture,
 } from "./paypal/client";
+import {
+  bookRefund,
+  rememberAuthorization,
+  rememberCapture,
+  rememberOrder,
+  settle,
+  sharedBook,
+} from "./paypal/webhook";
 import { currentVisitor } from "./visitor";
 import { emitZapier } from "./zapier";
 
@@ -56,7 +64,9 @@ function integrations(): Integration[] {
     {
       name: "PayPal",
       state: paypalConfigured() ? "sandbox" : "rehearsal",
-      detail: "Orders v2 authorize, Payments v2 capture and refund, Invoicing v2 for the balance.",
+      detail: `Orders v2 authorize, Payments v2 capture and refund, Invoicing v2 for the balance.${
+        process.env.PAYPAL_WEBHOOK_ID ? " Signed webhooks confirm each step." : ""
+      }`,
     },
     {
       name: "API context",
@@ -167,6 +177,11 @@ function fail(shop: Shop, before: number, text: string): ActionResult {
 
 export function getShop() {
   return state();
+}
+
+/** The shop a webhook belongs to. Never seeds one: a webhook has no visitor of its own. */
+export function visitorShop(visitor: string) {
+  return shops().get(visitor);
 }
 
 export function resetShop(): ActionResult {
@@ -454,6 +469,7 @@ export async function createPayPalOrder(): Promise<ActionResult & { orderId?: st
       customId: shop.quote.pieceId,
     });
     shop.paypal = { mode: "live", orderId: created.orderId, status: created.status };
+    rememberOrder(sharedBook(), currentVisitor(), created.orderId);
     bump(shop);
     return { ...result(shop, before), orderId: created.orderId };
   } catch (error) {
@@ -561,12 +577,16 @@ export async function authorizeDeposit(orderId?: string): Promise<ActionResult> 
     const id = orderId || shop.paypal?.orderId;
     if (!id) return fail(shop, before, "The PayPal button has to create the order before approval.");
     const authorized = await authorizeOrder(id);
+    const book = sharedBook();
+    rememberOrder(book, currentVisitor(), id);
+    rememberAuthorization(book, id, authorized.authorizationId);
     await afterAuthorization(shop, {
       mode: "live",
       orderId: id,
       authorizationId: authorized.authorizationId,
       status: authorized.status,
     });
+    settle(book, shop);
     bump(shop);
     return result(shop, before);
   } catch (error) {
@@ -586,6 +606,7 @@ export async function captureDeposit(): Promise<ActionResult> {
       const captured = await captureAuthorization(shop.paypal.authorizationId, amount);
       shop.paypal.captureId = captured.captureId;
       shop.paypal.status = captured.status ?? "COMPLETED";
+      rememberCapture(sharedBook(), shop.paypal.orderId, captured.captureId, shop.paypal.status, amount);
     } else {
       shop.paypal.captureId = rehearsalId("CAP");
       shop.paypal.status = "COMPLETED";
@@ -604,6 +625,7 @@ export async function captureDeposit(): Promise<ActionResult> {
           ? `The van is loaded. PayPal captured the ${usd(amount)} deposit. The balance stays on the invoice.`
           : `PayPal captured the ${usd(amount)} deposit. The balance stays on the invoice.`,
     });
+    settle(sharedBook(), shop);
     bump(shop);
     return result(shop, before);
   } catch (error) {
@@ -630,19 +652,7 @@ export async function refundScuff(): Promise<ActionResult> {
       shop.paypal.refundId = rehearsalId("REF");
       shop.paypal.status = "PARTIALLY_REFUNDED";
     }
-    shop.phase = "refunded";
-    shop.ledger = shop.ledger.map((row) => {
-      if (row.paypalOrderId !== shop.paypal?.orderId) return row;
-      const refunded = money(row.refunded + amount);
-      const net = row.gross - refunded;
-      const cost = row.gross * (1 - row.margin);
-      return {
-        ...row,
-        refunded,
-        status: "Partial refund",
-        margin: net <= 0 ? 0 : (net - cost) / net,
-      };
-    });
+    bookRefund(shop, shop.paypal.refundId, amount);
     say(shop, {
       role: "clerk",
       who: "Clerk",
@@ -651,6 +661,7 @@ export async function refundScuff(): Promise<ActionResult> {
           ? `The top has a scuff. ${usd(amount)} goes back on refund ${shop.paypal.refundId}. The desk still ships Friday.`
           : `${usd(amount)} goes back on refund ${shop.paypal.refundId}. The order still stands.`,
     });
+    settle(sharedBook(), shop);
     bump(shop);
     return result(shop, before);
   } catch (error) {
