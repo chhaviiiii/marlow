@@ -8,6 +8,10 @@
     {
       "key": "baseUrl",
       "value": "http://localhost:3000"
+    },
+    {
+      "key": "merchantId",
+      "value": ""
     }
   ],
   "item": [
@@ -152,6 +156,44 @@
           "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"tools/list\"\n}"
         },
         "url": "{{baseUrl}}/api/mcp"
+      }
+    },
+    {
+      "name": "Set up a shop",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Harbor Joinery\",\n  \"city\": \"Portland\",\n  \"depositPercent\": \"30\",\n  \"minMarginPercent\": \"35\",\n  \"catalog\": \"name,price,cost,lead days\\nOak stool,240,110,5\\n\"\n}"
+        },
+        "url": "{{baseUrl}}/api/merchants"
+      }
+    },
+    {
+      "name": "MCP tools/list for a created shop",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"tools/list\"\n}"
+        },
+        "url": "{{baseUrl}}/api/mcp/{{merchantId}}"
       }
     }
   ]

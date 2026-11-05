@@ -92,10 +92,10 @@ Open the approval link it prints and approve the $288 deposit in PayPal. Back in
 
 ## 2:36 to 2:45 · Close
 
-**Screen:** back to the Agent page.
+**Screen:** open the Set up tab, then the shop page it creates from the sample catalog.
 
 **Say:**
-> A small shop can sell to AI agents and keep control of its prices, its buyers, and its schedule. PayPal handles the money.
+> Any small shop can set this up from a spreadsheet. It gets its own link for agents, and it keeps control of its prices, its buyers, and its schedule. PayPal handles the money.
 
 Stop recording. Trim to under 3:00.
 
