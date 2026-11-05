@@ -25,11 +25,11 @@ function CopyBlock({ label, text, id }: { label: string; text: string; id: strin
     <div className="copy-block">
       <div className="copy-head">
         <h3 id={id}>{label}</h3>
-        <button className="secondary" type="button" onClick={copy} aria-describedby={id}>
+        <button className="secondary" type="button" onClick={copy} aria-label={`Copy ${label}`}>
           {copied ? <Check size={15} aria-hidden /> : <Copy size={15} aria-hidden />} Copy
         </button>
       </div>
-      <pre aria-labelledby={id}>{text}</pre>
+      <pre>{text}</pre>
       <p className="fine" role="status">
         {copied === true && `${label} copied.`}
         {copied === false && "Your browser blocked the copy. Select the text and copy it yourself."}
