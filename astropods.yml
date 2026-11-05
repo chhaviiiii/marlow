@@ -1,0 +1,18 @@
+name: marlow-clerk
+frontend: true
+description: The Field & Grain clerk. Quotes only inside shop policy, then moves money through PayPal.
+inputs:
+  - name: OPENAI_API_KEY
+    secret: true
+    required: false
+  - name: PAYPAL_CLIENT_ID
+    required: false
+  - name: PAYPAL_CLIENT_SECRET
+    secret: true
+    required: false
+  - name: CHANNEL3_API_KEY
+    secret: true
+    required: false
+build:
+  context: .
+  dockerfile: Dockerfile

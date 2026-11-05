@@ -1,0 +1,90 @@
+{
+  "info": {
+    "name": "Marlow",
+    "description": "Field & Grain clerk. Shop state, PayPal authorize/capture/refund, catalog search, and the Zapier sample hook.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" }
+  ],
+  "item": [
+    {
+      "name": "Shop",
+      "item": [
+        {
+          "name": "Get shop",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/shop" }
+        },
+        {
+          "name": "Reset week",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/shop" }
+        }
+      ]
+    },
+    {
+      "name": "Clerk",
+      "item": [
+        {
+          "name": "Open Friday",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/clerk/friday" }
+        },
+        {
+          "name": "Ask",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"message\": \"Walnut writing desk for Friday, ceiling 880.\"\n}" },
+            "url": "{{baseUrl}}/api/clerk/ask"
+          }
+        },
+        {
+          "name": "Sweep unpaid holds",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/clerk/sweep" }
+        }
+      ]
+    },
+    {
+      "name": "PayPal",
+      "item": [
+        {
+          "name": "Create deposit order",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/paypal/orders" }
+        },
+        {
+          "name": "Authorize deposit",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"\"\n}" },
+            "url": "{{baseUrl}}/api/paypal/authorize"
+          }
+        },
+        {
+          "name": "Capture deposit",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/paypal/capture" }
+        },
+        {
+          "name": "Refund scuff",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/paypal/refund" }
+        }
+      ]
+    },
+    {
+      "name": "Catalog search",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"query\": \"walnut writing desk\"\n}" },
+        "url": "{{baseUrl}}/api/catalog/search"
+      }
+    },
+    {
+      "name": "Zapier sample hook",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/hooks/sample" }
+    },
+    {
+      "name": "Astropods deploy check",
+      "request": { "method": "POST", "url": "{{baseUrl}}/api/stack/deploy" }
+    }
+  ]
+}
