@@ -33,17 +33,22 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app">
+      <a className="skip-link" href="#main">
+        Skip to main content
+      </a>
       <header className="rail">
         <Link href="/" className="mark">
-          <div className="seal">M</div>
+          <div className="seal" aria-hidden>
+            M
+          </div>
           <div>
             <strong>Marlow</strong>
             <span>Field &amp; Grain</span>
           </div>
         </Link>
-        <nav className="nav">
+        <nav className="nav" aria-label="Main">
           {LINKS.map(([href, label]) => (
-            <Link key={href} href={href} className={path === href ? "active" : ""}>
+            <Link key={href} href={href} className={path === href ? "active" : ""} aria-current={path === href ? "page" : undefined}>
               {label}
             </Link>
           ))}
@@ -66,18 +71,23 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </header>
-      <div className="stage">{children}</div>
+      <main id="main" className="stage" tabIndex={-1}>
+        {children}
+      </main>
     </div>
   );
 }
 
 export async function postAction(url: string, body?: unknown): Promise<ActionResult> {
+  const failed = new Error("The request did not go through. Try again.");
   const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body ?? {}),
+  }).catch(() => {
+    throw failed;
   });
-  const data = (await res.json()) as ActionResult;
-  if (!data.shop) throw new Error("The shop did not answer.");
+  const data = (await res.json().catch(() => null)) as ActionResult | null;
+  if (!data?.shop) throw failed;
   return data;
 }

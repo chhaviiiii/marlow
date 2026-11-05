@@ -20,14 +20,21 @@ const LIVE = new Set(["enforced", "sandbox", "loaded", "live", "configured", "ho
 export default function PermissionsPage() {
   const { shop, error } = useShop();
   const [deployNote, setDeployNote] = useState<string | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
 
   async function deploy() {
-    const res = await fetch("/api/stack/deploy", { method: "POST" });
-    const data = (await res.json()) as { note: string };
-    setDeployNote(data.note);
+    setProblem(null);
+    try {
+      const res = await fetch("/api/stack/deploy", { method: "POST" });
+      if (!res.ok) throw new Error(`Deploy returned ${res.status}`);
+      const data = (await res.json()) as { note: string };
+      setDeployNote(data.note);
+    } catch {
+      setProblem("The deploy check did not go through. Try again.");
+    }
   }
 
-  if (error) return <p className="page">{error}</p>;
+  if (error) return <p className="page" role="alert">{error}</p>;
   if (!shop) return <p className="page loading">Opening the rules…</p>;
 
   return (
@@ -41,7 +48,8 @@ export default function PermissionsPage() {
         </div>
         <button className="secondary" type="button" onClick={deploy}>Check the Astropods deploy</button>
       </header>
-      {deployNote && <p className="fine">{deployNote}</p>}
+      <p className="fine live-note" role="status">{deployNote}</p>
+      <p className="fine error live-note" role="alert">{problem}</p>
       <div className="rules">
         <section className="sheet">
           <h2>Shop policy</h2>

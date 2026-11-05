@@ -103,13 +103,17 @@ const STAMP: Partial<Record<(typeof PHASES)[number]["id"], string>> = {
   refunded: "Refunded",
 };
 
+const LIVE_BEAT = "Approve in PayPal. This holds the deposit and charges nothing yet.";
+const WORKING = "Checking the catalog, the market, and the mandate…";
+const FAILED = "The request did not go through. Try again.";
+
 type Turn =
   | { kind: "line"; entry: TranscriptEntry }
   | { kind: "checks"; id: string; items: TranscriptEntry[] };
 
 export function Desk() {
   const { shop, error, act, refresh } = useShop();
-  const [shown, setShown] = useState(0);
+  const [shown, setShown] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
   const [brief, setBrief] = useState(() =>
     typeof window === "undefined" ? "" : (new URLSearchParams(window.location.search).get("ask") ?? ""),
@@ -119,9 +123,18 @@ export function Desk() {
   const [payError, setPayError] = useState<string | null>(null);
   const [settled, setSettled] = useState<ShopSnapshot | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
+  const log = useRef<HTMLDivElement>(null);
+  const composer = useRef<HTMLDivElement>(null);
+  const field = useRef<HTMLInputElement>(null);
+  const nextAction = useRef<HTMLButtonElement>(null);
+  const focusAfter = useRef<"input" | "next" | null>(null);
   const booted = useRef(false);
 
-  if (shop && shown >= shop.transcript.length && settled !== shop) setSettled(shop);
+  const count = shown ?? shop?.transcript.length ?? 0;
+  const revealing = Boolean(shop && count < shop.transcript.length);
+  const busy = running || revealing;
+
+  if (shop && !revealing && settled !== shop) setSettled(shop);
 
   useEffect(() => {
     if (!shop) return;
@@ -133,7 +146,7 @@ export function Desk() {
     const target = shop.transcript.length;
     const timer = window.setInterval(() => {
       setShown((current) => {
-        if (current >= target) {
+        if (current === null || current >= target) {
           window.clearInterval(timer);
           return current;
         }
@@ -146,46 +159,70 @@ export function Desk() {
   useEffect(() => {
     const node = scroller.current;
     if (!node) return;
-    node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
-  }, [shown, running]);
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    if (node.scrollHeight > node.clientHeight + 1) node.scrollTo({ top: node.scrollHeight, behavior });
+    else if (focusAfter.current) composer.current?.scrollIntoView({ block: "nearest", behavior });
+  }, [count, running]);
 
-  async function ask(message: string, signer: Signer = buyingAs) {
+  useEffect(() => {
+    if (busy || !focusAfter.current) return;
+    const want = focusAfter.current;
+    focusAfter.current = null;
+    if (want === "input") {
+      field.current?.focus();
+      return;
+    }
+    const replies = log.current?.querySelectorAll<HTMLElement>(".entry.clerk");
+    const target = nextAction.current ?? replies?.[replies.length - 1] ?? field.current;
+    target?.focus({ preventScroll: true });
+    if (target?.matches(":focus-visible")) target.scrollIntoView({ block: "nearest" });
+  }, [busy, settled]);
+
+  async function ask(message: string, signer: Signer = buyingAs, typed = false) {
     const trimmed = message.trim();
     if (!trimmed || running) return;
-    setBrief("");
     setSignError(null);
+    setPayError(null);
     setRunning(true);
+    focusAfter.current = typed ? "input" : "next";
+    if (!typed) log.current?.focus({ preventScroll: true });
     try {
       await act("/api/clerk/ask", { message: trimmed, mandate: await signAs(signer) });
+      setBrief("");
     } catch (problem) {
-      setSignError(problem instanceof Error ? problem.message : "The request did not go through.");
+      focusAfter.current = null;
+      setSignError(problem instanceof Error ? problem.message : FAILED);
+      field.current?.focus();
     } finally {
       setRunning(false);
     }
   }
 
   async function run(url: string) {
-    if (running) return;
+    if (busy) return;
+    setPayError(null);
     setRunning(true);
+    focusAfter.current = "next";
     try {
       await act(url);
+    } catch (problem) {
+      focusAfter.current = null;
+      setPayError(problem instanceof Error ? problem.message : FAILED);
     } finally {
       setRunning(false);
     }
   }
 
-  if (error) return <p className="page">{error}</p>;
+  if (error) return <p className="page" role="alert">{error}</p>;
   if (!shop) return <p className="page loading">Opening the shop…</p>;
 
-  const entries = shop.transcript.slice(0, shown);
-  const revealing = shown < shop.transcript.length;
-  const busy = running || revealing;
+  const entries = shop.transcript.slice(0, count);
   const view = settled ?? shop;
   const fresh = entries.length <= 1 && view.phase === "idle" && !busy;
   const turns = groupTurns(entries.slice(fresh ? 1 : 0));
   const quote = view.quote;
   const current = PHASES.findIndex((item) => item.id === view.phase);
-  const placeholder =
+  const hint =
     view.phase === "quoted"
       ? "Ask about the shop. This deposit stays open."
       : view.phase === "authorized"
@@ -195,53 +232,62 @@ export function Desk() {
           : view.phase === "refunded"
             ? "The week is settled. Reset to start again."
             : "Choose who is buying, then ask for any piece.";
+  const beat = view.phase === "quoted" && view.mode === "live" ? LIVE_BEAT : BEAT[view.phase];
+  const lastChecks = turns.findLast((turn) => turn.kind === "checks");
+  const phaseLine = running
+    ? WORKING
+    : busy
+      ? ""
+      : [view.phase === "idle" ? "" : beat, lastChecks ? checkSummary(lastChecks.items) : ""].filter(Boolean).join(" ");
 
   return (
     <div className="desk-screen">
       <header className="top desk-top">
         <div>
           <h1>Agent</h1>
-          <p className="week">Field & Grain, Austin · {shop.merchant.week}</p>
+          <p className="week">Field &amp; Grain, Austin · {shop.merchant.week}</p>
         </div>
         <ol className="stepper" aria-label="Sale progress">
           {PHASES.map((step, index) => {
             const state = index < current || view.phase === "refunded" ? "done" : index === current ? "now" : "";
             return (
-              <li key={step.id} className={state}>
+              <li key={step.id} className={state} aria-current={state === "now" ? "step" : undefined}>
                 <i>{state === "done" ? <Check size={14} strokeWidth={3} /> : index + 1}</i>
                 {step.label}
+                {state === "done" && <span className="sr-only"> completed</span>}
               </li>
             );
           })}
         </ol>
       </header>
+      <p className="sr-only" role="status">
+        {phaseLine}
+      </p>
       <div className="desk">
         <div className="conversation">
           <section className="panel thread" aria-label="Conversation">
             <div className="transcript" ref={scroller}>
-              {fresh ? (
-                <Welcome shop={shop} disabled={busy} onAsk={ask} />
-              ) : (
-                <>
-                  {turns.map((turn) =>
+              {fresh && <Welcome shop={shop} disabled={busy} onAsk={ask} />}
+              <div className="log" role="log" aria-live="polite" aria-relevant="additions" aria-label="Transcript" tabIndex={-1} ref={log}>
+                {!fresh &&
+                  turns.map((turn) =>
                     turn.kind === "checks" ? (
                       <Checks key={turn.id} items={turn.items} />
                     ) : (
                       <Line key={turn.entry.id} entry={turn.entry} />
                     ),
                   )}
-                  {running && (
-                    <div className="typing" role="status">
-                      <span className="who">Marlow</span>
-                      <span>
-                        <LoaderCircle size={14} className="spin" /> Checking the catalog, the market, and the mandate…
-                      </span>
-                    </div>
-                  )}
-                </>
-              )}
+                {running && (
+                  <div className="typing" aria-hidden>
+                    <span className="who">Marlow</span>
+                    <span>
+                      <LoaderCircle size={14} className="spin" /> {WORKING}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="composer">
+            <div className="composer" ref={composer}>
               {!fresh && view.phase === "idle" && !busy && (
                 <div className="quick">
                   {SALES.map((sale) => (
@@ -256,23 +302,28 @@ export function Desk() {
                   ))}
                 </div>
               )}
-              <BuyingAs value={buyingAs} onChange={setBuyingAs} />
-              {signError && <p className="fine error">{signError}</p>}
+              <div className="composer-meta">
+                <BuyingAs value={buyingAs} onChange={setBuyingAs} />
+                <p className="fine" id="ask-hint">{hint}</p>
+              </div>
+              <p className="fine error live-note" role="alert">{signError}</p>
               <form
                 className="ask"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  void ask(brief);
+                  void ask(brief, buyingAs, true);
                 }}
               >
                 <input
+                  ref={field}
                   value={brief}
                   onChange={(event) => setBrief(event.target.value)}
-                  placeholder={placeholder}
                   aria-label="Ask the agent"
-                  disabled={running}
+                  aria-describedby="ask-hint"
+                  aria-busy={running}
+                  readOnly={running}
                 />
-                <button className="primary" type="submit" disabled={running || !brief.trim()}>
+                <button className="primary" type="submit" aria-disabled={running || !brief.trim()}>
                   {running ? "Working" : "Send"}
                 </button>
               </form>
@@ -313,14 +364,10 @@ export function Desk() {
 
                 {view.phase === "quoted" ? (
                   <>
-                    <p className="beat">
-                      {view.mode === "live"
-                        ? "Approve in PayPal. This holds the deposit and charges nothing yet."
-                        : BEAT.quoted}
-                    </p>
+                    <p className="beat">{beat}</p>
                     <div className="paypal-box">
                       {view.mode === "rehearsal" && (
-                        <button className="primary pay" type="button" disabled={busy} onClick={() => run("/api/paypal/authorize")}>
+                        <button ref={nextAction} className="primary pay" type="button" aria-disabled={busy} onClick={() => run("/api/paypal/authorize")}>
                           <Lock size={16} /> Hold {usd(quote.deposit)} with PayPal
                         </button>
                       )}
@@ -334,7 +381,6 @@ export function Desk() {
                           onError={setPayError}
                         />
                       )}
-                      {payError && <p className="fine error">{payError}</p>}
                       <p className="fine">
                         {view.mode === "live" ? "Sign in with a sandbox buyer account. " : ""}
                         {quote.pieceId === "desk-walnut" ? "Approving releases Thursday's mill for this desk." : ""}
@@ -343,15 +389,15 @@ export function Desk() {
                   </>
                 ) : (
                   <>
-                    <p className="beat">{BEAT[view.phase]}</p>
+                    <p className="beat">{beat}</p>
                     <PaymentSteps shop={view} />
                     {view.phase === "authorized" && (
-                      <button className="primary pay" type="button" disabled={busy} onClick={() => run("/api/paypal/capture")}>
+                      <button ref={nextAction} className="primary pay" type="button" aria-disabled={busy} onClick={() => run("/api/paypal/capture")}>
                         <Check size={16} /> Capture {usd(quote.deposit)} · van loaded
                       </button>
                     )}
                     {view.phase === "captured" && (
-                      <button className="secondary pay" type="button" disabled={busy} onClick={() => run("/api/paypal/refund")}>
+                      <button ref={nextAction} className="secondary pay" type="button" aria-disabled={busy} onClick={() => run("/api/paypal/refund")}>
                         Refund $80 for a scuff
                       </button>
                     )}
@@ -366,6 +412,8 @@ export function Desk() {
                     )}
                   </>
                 )}
+
+                <p className="fine error live-note" role="alert">{payError}</p>
 
                 <dl className="meta">
                   <div>
@@ -414,9 +462,9 @@ function Welcome({
           PayPal to hold the deposit.
         </p>
       </header>
-      <section className="book-group">
+      <section className="book-group" role="group" aria-labelledby="group-sales">
         <div className="book-head">
-          <h3>Run a sale</h3>
+          <h3 id="group-sales">Run a sale</h3>
           <span aria-hidden>Buyer</span>
           <span className="notes" aria-hidden>What you will see</span>
           <span className="amount" aria-hidden>Price</span>
@@ -439,9 +487,9 @@ function Welcome({
           );
         })}
       </section>
-      <section className="book-group">
+      <section className="book-group" role="group" aria-labelledby="group-guards">
         <div className="book-head">
-          <h3>Try to get past it</h3>
+          <h3 id="group-guards">Try to get past it</h3>
           <span aria-hidden>What stops it</span>
         </div>
         {GUARDS.map((guard) => {
@@ -473,7 +521,7 @@ function Line({ entry }: { entry: TranscriptEntry }) {
     );
   }
   return (
-    <article className="entry clerk">
+    <article className="entry clerk" tabIndex={-1}>
       <div className="who">
         Marlow
         {entry.via === "model" && <span className="via">AI</span>}
@@ -486,13 +534,15 @@ function Line({ entry }: { entry: TranscriptEntry }) {
 function Checks({ items }: { items: TranscriptEntry[] }) {
   const refused = items.some((item) => item.ok === false);
   return (
-    <details className={`checks ${refused ? "refused" : ""}`}>
+    <details className={`checks ${refused ? "refused" : ""}`} aria-live="off">
       <summary>
+        <span className="sr-only">{checkSummary(items)}</span>
         <span className="chips">
           {items.map((item) => (
             <span key={item.id} className={`chip ${item.ok === false ? "no" : item.sample ? "sample" : ""}`}>
               {item.ok === false ? <Ban size={12} /> : item.sample ? <Minus size={12} strokeWidth={3} /> : <Check size={12} strokeWidth={3} />}
               {item.tool ?? "Shop"}
+              <span className="sr-only"> {checkState(item)}</span>
             </span>
           ))}
         </span>
@@ -501,13 +551,31 @@ function Checks({ items }: { items: TranscriptEntry[] }) {
       <div className="check-list">
         {items.map((item) => (
           <p className="check" key={item.id}>
-            <span>{item.tool ?? "Shop"}</span>
+            <span>
+              {item.tool ?? "Shop"}
+              <span className="sr-only"> {checkState(item)}</span>
+            </span>
             {item.text}
           </p>
         ))}
       </div>
     </details>
   );
+}
+
+function checkState(item: TranscriptEntry) {
+  return item.ok === false ? "refused" : item.sample ? "sample data" : "passed";
+}
+
+function checkSummary(items: TranscriptEntry[]) {
+  const tally = (state: string) => items.filter((item) => checkState(item) === state).length;
+  const noun = items.length === 1 ? "check" : "checks";
+  const counts = [
+    `${tally("passed")} passed`,
+    tally("sample data") ? `${tally("sample data")} sample data` : "",
+    tally("refused") ? `${tally("refused")} refused` : "",
+  ];
+  return `${items.length} ${noun}: ${counts.filter(Boolean).join(", ")}.`;
 }
 
 function PaymentSteps({ shop }: { shop: ShopSnapshot }) {
@@ -525,7 +593,10 @@ function PaymentSteps({ shop }: { shop: ShopSnapshot }) {
         <li key={step.label} className={step.done ? "done" : ""}>
           <i>{step.done ? <Check size={12} strokeWidth={3} /> : null}</i>
           <span>
-            <b>{step.label}</b>
+            <b>
+              {step.label}
+              {step.done && <span className="sr-only"> completed</span>}
+            </b>
             <small>{step.id ?? "Pending"}</small>
           </span>
           <em>{usd(step.amount)}</em>
@@ -555,7 +626,7 @@ function HowItWorks() {
   ];
   return (
     <div className="how">
-      <h3>How a sale works</h3>
+      <h2>How a sale works</h2>
       <ol>
         {steps.map((step, index) => (
           <li key={step.title}>
@@ -568,7 +639,7 @@ function HowItWorks() {
         ))}
       </ol>
       <div className="agents">
-        <h4>Registered agents</h4>
+        <h3>Registered agents</h3>
         <ul>
           {["Juniper", "Northwind", "Atelier"].map((name) => (
             <li key={name}>

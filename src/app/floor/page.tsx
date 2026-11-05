@@ -9,7 +9,7 @@ const FloorScheduler = dynamic(() => import("@/components/floor-scheduler"), { s
 
 export default function FloorPage() {
   const { shop, error } = useShop();
-  if (error) return <p className="page">{error}</p>;
+  if (error) return <p className="page" role="alert">{error}</p>;
   if (!shop) return <p className="page loading">Opening the floor…</p>;
   const desk = shop.events.find((event) => event.id === "desk-mill");
   return (
