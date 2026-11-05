@@ -36,6 +36,16 @@ export type QuoteDecision =
     }
   | { ok: false; reason: string };
 
+const DOLLARS = /\$\s*(\d[\d,]*(?:\.\d{1,2})?)/;
+const BARE_LIMIT =
+  /\b(?:over|under|ceiling(?:\s+of)?|budget(?:\s+(?:of|is))?|max(?:imum)?(?:\s+of)?|limit(?:\s+of)?|up to|at most|no more than)\s*:?\s*(\d[\d,]*(?:\.\d{1,2})?)(?![\d,]*\s*(?:ft|feet|foot|in|inch|inches|cm|mm|lbs?|kg|days?|weeks?|people|seats)\b)/i;
+
+/** The buyer's limit, written with a dollar sign or as a bare number after a limit word. */
+export function parseCeiling(message: string) {
+  const match = message.match(DOLLARS) ?? message.match(BARE_LIMIT);
+  return match ? Number(match[1].replace(/,/g, "")) : null;
+}
+
 export function quotePiece(piece: PricedPiece, request: QuoteRequest): QuoteDecision {
   const margin = (piece.price - piece.cost) / piece.price;
   if (piece.price > request.ceiling) {

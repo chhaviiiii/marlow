@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { AgLlmRequest, AgLlmResponse } from "ag-studio";
 import { usd } from "@/lib/format";
 import { getShop } from "@/server/shop";
+import { withVisitor } from "@/server/visitor";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,7 @@ function ledgerAnswer(question: string) {
     .join(" ");
 }
 
-export async function POST(request: Request) {
+export const POST = withVisitor(async (request: Request) => {
   const body = (await request.json()) as AgLlmRequest;
   const key = process.env.OPENAI_API_KEY;
   if (!key) {
@@ -150,4 +151,4 @@ export async function POST(request: Request) {
     output,
   };
   return NextResponse.json(response);
-}
+});

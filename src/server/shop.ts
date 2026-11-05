@@ -1,6 +1,6 @@
 import { WEEK, initialEvents, initialLedger, initialTranscript, PIECES } from "@/lib/catalog";
 import { money, moneyString, percent, usd } from "@/lib/format";
-import { POLICY, quotePiece } from "@/lib/policy";
+import { parseCeiling, POLICY, quotePiece } from "@/lib/policy";
 import type {
   ActionResult,
   FloorEvent,
@@ -26,11 +26,19 @@ import {
   paypalMode,
   refundCapture,
 } from "./paypal/client";
+import { currentVisitor } from "./visitor";
 import { emitZapier } from "./zapier";
 
 type Shop = ShopSnapshot;
 
-const globalStore = globalThis as unknown as { __marlow?: Shop };
+const MAX_SHOPS = 500;
+
+const globalStore = globalThis as unknown as { __marlowShops?: Map<string, Shop> };
+
+function shops() {
+  globalStore.__marlowShops ??= new Map();
+  return globalStore.__marlowShops;
+}
 
 function integrations(): Integration[] {
   return [
@@ -93,7 +101,7 @@ function integrations(): Integration[] {
     {
       name: "Render",
       state: "blueprint",
-      detail: "render.yaml runs the web app and a sweep that expires unpaid holds.",
+      detail: "render.yaml runs the web app.",
     },
   ];
 }
@@ -120,15 +128,22 @@ function seed(): Shop {
 }
 
 function state() {
-  if (!globalStore.__marlow) globalStore.__marlow = seed();
-  if (globalStore.__marlow.admission === undefined) globalStore.__marlow.admission = null;
-  globalStore.__marlow.mode = paypalMode();
-  globalStore.__marlow.llm = Boolean(process.env.OPENAI_API_KEY);
-  globalStore.__marlow.model = process.env.OPENAI_MODEL || "gpt-4o-mini";
-  globalStore.__marlow.integrations = integrations();
-  globalStore.__marlow.paypalClientId =
-    process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || process.env.PAYPAL_CLIENT_ID || null;
-  return globalStore.__marlow;
+  const all = shops();
+  const visitor = currentVisitor();
+  const shop = all.get(visitor) ?? seed();
+  // Re-insert so the oldest idle visitor is the first one evicted.
+  all.delete(visitor);
+  all.set(visitor, shop);
+  if (all.size > MAX_SHOPS) {
+    const oldest = all.keys().next().value;
+    if (oldest) all.delete(oldest);
+  }
+  shop.mode = paypalMode();
+  shop.llm = Boolean(process.env.OPENAI_API_KEY);
+  shop.model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  shop.integrations = integrations();
+  shop.paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || process.env.PAYPAL_CLIENT_ID || null;
+  return shop;
 }
 
 function bump(shop: Shop) {
@@ -155,7 +170,7 @@ export function getShop() {
 }
 
 export function resetShop(): ActionResult {
-  globalStore.__marlow = seed();
+  shops().delete(currentVisitor());
   return { shop: state(), added: 0 };
 }
 
@@ -197,11 +212,6 @@ function commitDesk(shop: Shop, orderId: string) {
     },
   ];
   shop.events = [...shop.events.filter((event) => !event.id.startsWith("desk-")), ...deskEvents];
-}
-
-function parseCeiling(message: string) {
-  const match = message.match(/\$\s*(\d[\d,]*(?:\.\d{1,2})?)/);
-  return match ? Number(match[1].replace(/,/g, "")) : null;
 }
 
 function buyingIntent(message: string) {
@@ -329,7 +339,10 @@ export async function consider(message: string, echo = true): Promise<ActionResu
       say(shop, {
         role: "trace",
         tool: "Channel3",
-        text: `The market is ${usd(low)} to ${usd(high)}. ${usd(top.price)} holds.`,
+        sample: !market.live,
+        text: market.live
+          ? `The market is ${usd(low)} to ${usd(high)}. ${usd(top.price)} holds.`
+          : `Sample comps, not a live search: ${usd(low)} to ${usd(high)}. ${usd(top.price)} holds.`,
       });
     }
     say(shop, {
@@ -341,7 +354,8 @@ export async function consider(message: string, echo = true): Promise<ActionResu
     say(shop, {
       role: "trace",
       tool: "Kernel",
-      text: browser.live ? browser.note : "The comparable listing checks out. The price stands.",
+      sample: !browser.live,
+      text: browser.note,
     });
   }
 

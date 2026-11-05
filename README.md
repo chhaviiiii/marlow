@@ -38,7 +38,7 @@ The Agent page opens with six demo options:
 
 | Option | What it shows |
 | --- | --- |
-| **Full sale**: walnut writing desk for Juniper | Seven checks pass, PayPal holds a $336 deposit, the floor moves, then capture and refund |
+| **Full sale**: walnut writing desk for Juniper | The checks pass, PayPal holds a $336 deposit, the floor moves, then capture and refund |
 | **Second buyer**: elm bench for Atelier | The same rules for a different agent and piece: a $288 deposit |
 | **Browse**: anything in white oak? | Plain words in, four pieces and prices out, no payment |
 | **Unregistered agent** | Drift asks for the desk. The mandate check refuses it and PayPal stays closed |
@@ -46,7 +46,7 @@ The Agent page opens with six demo options:
 | **Card number** | A pasted card number is masked and refused |
 
 1. Try the three guardrails first and watch the red checks.
-2. Click **Full sale**. Seven checks pass and the PayPal card shows a $336 deposit.
+2. Click **Full sale**. The checks pass and the PayPal card shows a $336 deposit. Channel3 and Kernel show grey chips until their keys are set, because they ran on sample data.
 4. Hold, capture, and refund the deposit from the card. Open **Floor** to see Thursday's mill change hands, and **Books** to see the ledger.
 
 With no keys, PayPal calls run in **rehearsal** with `RH-` ids, so the whole flow works offline. Add sandbox keys to call PayPal for real:
@@ -117,7 +117,7 @@ The server calls use the official **PayPal Server SDK** (`@paypal/paypal-server-
 | Card numbers refused and masked | Agents should present a token bound to a mandate. A raw card number is masked before it reaches the log and the sale stops. |
 | Authorize, then capture | A deposit hold commits the buyer while the shop builds. Capture waits for shipping, and refunds go back through the same PayPal payment. |
 | Money moves the schedule | An unpaid hold on Thursday's mill is released the moment a real PayPal authorization arrives. The floor shows what the money is doing. |
-| Visible checks | Every step the agent took shows as a chip under its answer, green or red, with the detail one click away. Judges and merchants can see why a sale went through. |
+| Visible checks | Every step the agent took shows as a chip under its answer, green or red, or grey for sample data, with the detail one click away. Judges and merchants can see why a sale went through. |
 | Runs with zero keys | Rehearsal mode lets anyone clone and click through the full flow. The same buttons call the PayPal sandbox once keys are present. |
 
 ## Sponsor tools
@@ -132,7 +132,7 @@ The server calls use the official **PayPal Server SDK** (`@paypal/paypal-server-
 | **Elastic** | Catalog search. Elasticsearch with `ELASTIC_URL` (`docker compose up`), embedded scoring otherwise | `src/server/elastic.ts` |
 | **Kernel** | Opens the top comparable listing in a cloud browser before the quote goes out, with `KERNEL_API_KEY` | `src/server/kernel.ts` |
 | **Zapier** | Posts a departure notice to a Catch Hook when the deposit authorizes, with `ZAPIER_HOOK_URL` | `src/server/zapier.ts` |
-| **Render** | Hosts the live demo from the `render.yaml` blueprint. `scripts/sweep.mjs` can run as a Render cron job to expire unpaid holds | `render.yaml`, `scripts/sweep.mjs` |
+| **Render** | Hosts the live demo from the `render.yaml` blueprint. | `render.yaml`, `scripts/sweep.mjs` |
 | **Postman** | A collection for every API route | `postman/marlow.postman_collection.json` |
 | **Astropods** | The agent's deploy spec | `astropods.yml`, `AGENT.md` |
 
@@ -147,7 +147,7 @@ The server calls use the official **PayPal Server SDK** (`@paypal/paypal-server-
 
 ## Deploy
 
-**Render.** New → Blueprint → pick this repo. `render.yaml` creates the web service on the Starter plan (change `plan: starter` to `plan: free` to run it at no cost; free services sleep when idle) and asks for `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, and `OPENAI_API_KEY`. Other tool keys can be added in the service's Environment tab. To expire unpaid holds on a schedule, add a Render cron job that runs `node scripts/sweep.mjs` with `MARLOW_URL` set to the service URL.
+**Render.** New → Blueprint → pick this repo. `render.yaml` creates the web service on the Starter plan (change `plan: starter` to `plan: free` to run it at no cost; free services sleep when idle) and asks for `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, and `OPENAI_API_KEY`. Other tool keys can be added in the service's Environment tab.
 
 **Docker.** `docker build -t marlow . && docker run -p 3000:3000 --env-file .env.local marlow`
 
@@ -172,7 +172,7 @@ npm run build
 
 ## Limits of the prototype
 
-- Shop state lives in memory on one server, and **Reset the week** restores it. A real shop would persist orders.
+- Each browser gets its own shop, held in memory on one server and keyed by a cookie. **Reset the week** restores only that shop, so two judges never collide. A real shop would persist orders.
 - The three buyer agents and their signing keys are built in. A real registry would come from the payment network or the merchant's onboarding.
 - Field & Grain and its customers are fictional. PayPal runs in the sandbox.
 

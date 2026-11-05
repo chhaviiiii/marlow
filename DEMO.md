@@ -46,7 +46,7 @@ Target length: **2:45**. Record the screen with your voice. No music.
 Let the chips finish. Click **Details** once to open the checks, then close it.
 
 **Say:**
-> Now Juniper's agent asks in plain English. The model turns that into a request and calls the shop's tools: catalog search, market comps, the workshop floor, the pricing policy, and the mandate. Every check is green. The desk is $840, so the deposit is $336, and Juniper's mandate is signed for a ceiling of $880, with no card on file.
+> Now Juniper's agent asks in plain English. The model turns that into a request and calls the shop's tools: catalog search, market comps, the workshop floor, the pricing policy, and the mandate. Every live check is green, and anything on sample data shows grey. The desk is $840, so the deposit is $336, and Juniper's mandate is signed for a ceiling of $880, with no card on file.
 
 ## 1:25 to 1:50 · PayPal holds the deposit
 
