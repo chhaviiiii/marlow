@@ -11,7 +11,7 @@ const BooksStudio = dynamic(() => import("@/components/books-studio"), {
 
 export default function BooksPage() {
   const { shop, error } = useShop();
-  if (error) return <p className="page">{error}</p>;
+  if (error) return <p className="page" role="alert">{error}</p>;
   if (!shop) return <p className="page loading">Opening the books…</p>;
   const sum = (key: "gross" | "deposit" | "captured" | "refunded") =>
     shop.ledger.reduce((total, row) => total + row[key], 0);

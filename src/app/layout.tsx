@@ -15,7 +15,10 @@ const typed = Courier_Prime({
 });
 
 export const metadata: Metadata = {
-  title: "Marlow: the shop agent for agent buyers",
+  title: {
+    default: "Marlow: the shop agent for agent buyers",
+    template: "%s · Marlow",
+  },
   description:
     "Marlow sells to AI buyer agents. Policy sets the price, a signed mandate admits the buyer, and PayPal holds the deposit.",
 };

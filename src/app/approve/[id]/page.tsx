@@ -47,7 +47,8 @@ export default function ApprovePage({ params }: { params: Promise<{ id: string }
   async function hold() {
     setWorking(true);
     try {
-      await fetch(`/api/orders/${id}/paypal/authorize`, { method: "POST" });
+      const res = await fetch(`/api/orders/${id}/paypal/authorize`, { method: "POST" });
+      if (!res.ok) throw new Error(`Authorize returned ${res.status}`);
       await load();
     } catch {
       setProblem("The hold did not go through. Try again.");
@@ -56,7 +57,7 @@ export default function ApprovePage({ params }: { params: Promise<{ id: string }
     }
   }
 
-  if (!order) return <p className="page">{problem ?? "Opening the order…"}</p>;
+  if (!order) return <p className="page" role={problem ? "alert" : undefined}>{problem ?? "Opening the order…"}</p>;
 
   return (
     <div className="page">
@@ -111,7 +112,7 @@ export default function ApprovePage({ params }: { params: Promise<{ id: string }
                 onError={setProblem}
               />
             )}
-            {problem && <p className="fine error">{problem}</p>}
+            <p className="fine error live-note" role="alert">{problem}</p>
           </div>
         ) : (
           <p className="beat">

@@ -13,22 +13,29 @@ export default function CatalogPage() {
   const [query, setQuery] = useState("walnut desk");
   const [pieces, setPieces] = useState<Piece[] | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
 
   async function search(event: React.FormEvent) {
     event.preventDefault();
-    const res = await fetch("/api/catalog/search", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ query }),
-    });
-    const data = (await res.json()) as { pieces: Piece[]; note: string; engine: string };
-    setPieces(data.pieces);
-    const count = data.pieces.length;
-    const label = count === 1 ? "piece" : "pieces";
-    setNote(data.engine === "elastic" ? `Elasticsearch · ${count} ${label}` : `${count} ${label} in the shop`);
+    setProblem(null);
+    try {
+      const res = await fetch("/api/catalog/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      if (!res.ok) throw new Error(`Search returned ${res.status}`);
+      const data = (await res.json()) as { pieces: Piece[]; note: string; engine: string };
+      setPieces(data.pieces);
+      const count = data.pieces.length;
+      const label = count === 1 ? "piece" : "pieces";
+      setNote(data.engine === "elastic" ? `Elasticsearch · ${count} ${label}` : `${count} ${label} in the shop`);
+    } catch {
+      setProblem("The search did not go through. Try again.");
+    }
   }
 
-  if (error) return <p className="page">{error}</p>;
+  if (error) return <p className="page" role="alert">{error}</p>;
   if (!shop) return <p className="page">Opening the catalog…</p>;
   const shown = pieces ?? shop.pieces;
 
@@ -45,7 +52,8 @@ export default function CatalogPage() {
         <input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search the catalog" />
         <button className="secondary" type="submit">Search</button>
       </form>
-      {note && <p className="fine">{note}</p>}
+      <p className="fine live-note" role="status">{note}</p>
+      <p className="fine error live-note" role="alert">{problem}</p>
       <div className="price-book">
         <div className="book-cols" aria-hidden>
           <span />
@@ -59,7 +67,7 @@ export default function CatalogPage() {
           <article key={piece.id} className="piece">
             <PieceMark id={piece.id} />
             <div className="piece-title">
-              <h3>{piece.name}</h3>
+              <h2>{piece.name}</h2>
               <p>{piece.blurb}</p>
             </div>
             <p className="piece-spec">{piece.wood} · {piece.size}</p>
