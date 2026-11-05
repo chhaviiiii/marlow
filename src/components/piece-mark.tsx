@@ -1,5 +1,5 @@
 export function PieceMark({ id }: { id: string }) {
-  const common = { fill: "none", stroke: "#001435", strokeWidth: 1.4, strokeLinecap: "round" as const };
+  const common = { fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round" as const };
   return (
     <svg className="drawing" viewBox="0 0 84 64" aria-hidden>
       {id === "desk-walnut" && (

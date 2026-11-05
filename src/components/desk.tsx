@@ -10,7 +10,6 @@ import {
   Lock,
   Minus,
   Receipt,
-  Search,
   ShieldCheck,
   ShieldX,
 } from "lucide-react";
@@ -89,6 +88,12 @@ const BEAT: Record<(typeof PHASES)[number]["id"], string> = {
   authorized: "PayPal is holding the deposit. Capture when the piece ships.",
   captured: "The deposit is captured. The balance is on the invoice.",
   refunded: "Settled. The refund went back through PayPal and the order stands.",
+};
+
+const STAMP: Partial<Record<(typeof PHASES)[number]["id"], string>> = {
+  authorized: "Held",
+  captured: "Captured",
+  refunded: "Refunded",
 };
 
 type Turn =
@@ -183,15 +188,15 @@ export function Desk() {
     <div className="desk-screen">
       <header className="top desk-top">
         <div>
-          <p className="kicker">Field & Grain · Austin · {shop.merchant.week}</p>
           <h1>Agent</h1>
+          <p className="week">Field & Grain, Austin · {shop.merchant.week}</p>
         </div>
         <ol className="stepper" aria-label="Sale progress">
           {PHASES.map((step, index) => {
             const state = index < current || view.phase === "refunded" ? "done" : index === current ? "now" : "";
             return (
               <li key={step.id} className={state}>
-                <i>{state === "done" ? <Check size={12} strokeWidth={3} /> : index + 1}</i>
+                <i>{state === "done" ? <Check size={14} strokeWidth={3} /> : index + 1}</i>
                 {step.label}
               </li>
             );
@@ -215,7 +220,7 @@ export function Desk() {
                   )}
                   {running && (
                     <div className="typing" role="status">
-                      <span className="avatar seal-sm">M</span>
+                      <span className="who">Marlow</span>
                       <span>
                         <LoaderCircle size={14} className="spin" /> Checking the catalog, the market, and the mandate…
                       </span>
@@ -262,7 +267,7 @@ export function Desk() {
 
           <aside className="panel offer" aria-label="PayPal">
             <div className="offer-top">
-              <p className="eyebrow">PayPal</p>
+              <p className="ticket-name">Job ticket · PayPal</p>
               <span className={`mode-tag ${view.mode}`}>{view.mode === "live" ? "Sandbox" : "Rehearsal"}</span>
             </div>
             {quote ? (
@@ -273,6 +278,11 @@ export function Desk() {
                     <h2>{usd(quote.deposit)}</h2>
                     <p className="muted">Deposit · {quote.pieceName}</p>
                   </div>
+                  {STAMP[view.phase] && (
+                    <span key={view.phase} className="stamp" aria-hidden>
+                      {STAMP[view.phase]}
+                    </span>
+                  )}
                 </div>
 
                 {view.admission && (
@@ -375,51 +385,57 @@ export function Desk() {
 function Welcome({ shop, disabled, onAsk }: { shop: ShopSnapshot; disabled: boolean; onAsk: (message: string) => void }) {
   return (
     <div className="welcome">
-      <span className="avatar seal-lg">M</span>
-      <h2>Who is buying today?</h2>
-      <p>
-        Ask for any piece in plain words. Marlow prices it from shop policy, checks the buyer&apos;s mandate, and asks
-        PayPal to hold the deposit.
-      </p>
-      <p className="group-label">Run a sale</p>
-      <div className="start-grid">
+      <header className="welcome-head">
+        <h2>Who is buying today?</h2>
+        <p>
+          Ask for any piece in plain words. Marlow prices it from shop policy, checks the buyer&apos;s mandate, and asks
+          PayPal to hold the deposit.
+        </p>
+      </header>
+      <section className="book-group">
+        <div className="book-head">
+          <h3>Run a sale</h3>
+          <span aria-hidden>Buyer</span>
+          <span className="notes" aria-hidden>What you will see</span>
+          <span className="amount" aria-hidden>Price</span>
+        </div>
         {SALES.map((sale) => {
           const piece = shop.pieces.find((item) => item.id === sale.pieceId);
           const browse = sale.tag === "Browse";
           return (
             <button key={sale.chip} type="button" className="start" disabled={disabled} onClick={() => onAsk(sale.message)}>
-              <span className="start-top">
-                <PieceMark id={sale.pieceId} />
-                <span className={`start-tag ${browse ? "browse" : ""}`}>{sale.tag}</span>
+              <PieceMark id={sale.pieceId} />
+              <span className="start-name">
+                <b>{sale.title}</b>
+                <span className="start-tag">{sale.tag}</span>
               </span>
-              <b>{sale.title}</b>
               <span className="start-buyer">{sale.buyer}</span>
               <span className="start-note">{sale.note}</span>
-              <span className="start-price">
-                {browse ? "Search the catalog" : piece ? usd(piece.price) : ""}
-                <ArrowUpRight size={14} />
-              </span>
+              <span className="start-price">{browse ? "Search" : piece ? usd(piece.price) : ""}</span>
+              <ArrowUpRight size={16} className="row-go" />
             </button>
           );
         })}
-      </div>
-      <p className="group-label">Try to get past it</p>
-      <div className="guard-grid">
+      </section>
+      <section className="book-group">
+        <div className="book-head">
+          <h3>Try to get past it</h3>
+          <span aria-hidden>What stops it</span>
+        </div>
         {GUARDS.map((guard) => {
           const Icon = guard.icon;
           return (
             <button key={guard.chip} type="button" className="guard" disabled={disabled} onClick={() => onAsk(guard.message)}>
               <span className="guard-icon">
-                <Icon size={16} />
+                <Icon size={18} />
               </span>
-              <span>
-                <b>{guard.title}</b>
-                <small>{guard.stop}</small>
-              </span>
+              <b>{guard.title}</b>
+              <small>{guard.stop}</small>
+              <ArrowUpRight size={16} className="row-go" />
             </button>
           );
         })}
-      </div>
+      </section>
     </div>
   );
 }
@@ -436,14 +452,11 @@ function Line({ entry }: { entry: TranscriptEntry }) {
   }
   return (
     <article className="entry clerk">
-      <span className="avatar seal-sm">M</span>
-      <div>
-        <div className="who">
-          Marlow
-          {entry.via === "model" && <span className="via">AI</span>}
-        </div>
-        <p>{entry.text}</p>
+      <div className="who">
+        Marlow
+        {entry.via === "model" && <span className="via">AI</span>}
       </div>
+      <p>{entry.text}</p>
     </article>
   );
 }
@@ -512,32 +525,27 @@ function PaymentSteps({ shop }: { shop: ShopSnapshot }) {
 
 function HowItWorks() {
   const steps = [
-    { icon: Search, title: "An agent asks", text: "A piece, who it is for, a ceiling, and a deadline." },
-    { icon: Receipt, title: "Policy prices it", text: "40% deposit. The model never sets the amount." },
-    { icon: ShieldCheck, title: "The mandate is checked", text: "Registered agent, signed consent. Card numbers are refused." },
-    { icon: Lock, title: "PayPal holds the deposit", text: "Capture when it ships. Refund through PayPal if needed." },
+    { title: "An agent asks", text: "A piece, who it is for, a ceiling, and a deadline." },
+    { title: "Policy prices it", text: "40% deposit. The model never sets the amount." },
+    { title: "The mandate is checked", text: "Registered agent, signed consent. Card numbers are refused." },
+    { title: "PayPal holds the deposit", text: "Capture when it ships. Refund through PayPal if needed." },
   ];
   return (
     <div className="how">
       <h3>How a sale works</h3>
       <ol>
-        {steps.map((step) => {
-          const Icon = step.icon;
-          return (
-            <li key={step.title}>
-              <span className="how-icon">
-                <Icon size={16} />
-              </span>
-              <span>
-                <b>{step.title}</b>
-                <small>{step.text}</small>
-              </span>
-            </li>
-          );
-        })}
+        {steps.map((step, index) => (
+          <li key={step.title}>
+            <i>{index + 1}</i>
+            <span>
+              <b>{step.title}</b>
+              <small>{step.text}</small>
+            </span>
+          </li>
+        ))}
       </ol>
       <div className="agents">
-        <p className="eyebrow">Registered agents</p>
+        <h4>Registered agents</h4>
         <ul>
           {["Juniper", "Northwind", "Atelier"].map((name) => (
             <li key={name}>
