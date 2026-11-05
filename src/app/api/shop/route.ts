@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
 import { getShop, resetShop } from "@/server/shop";
+import { withVisitor } from "@/server/visitor";
 
 export const dynamic = "force-dynamic";
 
-export function GET() {
-  return NextResponse.json(getShop());
-}
+export const GET = withVisitor(() => NextResponse.json(getShop()));
 
-export function POST() {
-  return NextResponse.json(resetShop());
-}
+export const POST = withVisitor(() => NextResponse.json(resetShop()));

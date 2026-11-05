@@ -132,7 +132,7 @@ The server calls use the official **PayPal Server SDK** (`@paypal/paypal-server-
 | **Elastic** | Catalog search. Elasticsearch with `ELASTIC_URL` (`docker compose up`), embedded scoring otherwise | `src/server/elastic.ts` |
 | **Kernel** | Opens the top comparable listing in a cloud browser before the quote goes out, with `KERNEL_API_KEY` | `src/server/kernel.ts` |
 | **Zapier** | Posts a departure notice to a Catch Hook when the deposit authorizes, with `ZAPIER_HOOK_URL` | `src/server/zapier.ts` |
-| **Render** | Hosts the live demo from the `render.yaml` blueprint. `scripts/sweep.mjs` can run as a Render cron job to expire unpaid holds | `render.yaml`, `scripts/sweep.mjs` |
+| **Render** | Hosts the live demo from the `render.yaml` blueprint. | `render.yaml`, `scripts/sweep.mjs` |
 | **Postman** | A collection for every API route | `postman/marlow.postman_collection.json` |
 | **Astropods** | The agent's deploy spec | `astropods.yml`, `AGENT.md` |
 
@@ -147,7 +147,7 @@ The server calls use the official **PayPal Server SDK** (`@paypal/paypal-server-
 
 ## Deploy
 
-**Render.** New → Blueprint → pick this repo. `render.yaml` creates the web service on the Starter plan (change `plan: starter` to `plan: free` to run it at no cost; free services sleep when idle) and asks for `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, and `OPENAI_API_KEY`. Other tool keys can be added in the service's Environment tab. To expire unpaid holds on a schedule, add a Render cron job that runs `node scripts/sweep.mjs` with `MARLOW_URL` set to the service URL.
+**Render.** New → Blueprint → pick this repo. `render.yaml` creates the web service on the Starter plan (change `plan: starter` to `plan: free` to run it at no cost; free services sleep when idle) and asks for `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, and `OPENAI_API_KEY`. Other tool keys can be added in the service's Environment tab.
 
 **Docker.** `docker build -t marlow . && docker run -p 3000:3000 --env-file .env.local marlow`
 
@@ -172,7 +172,7 @@ npm run build
 
 ## Limits of the prototype
 
-- Shop state lives in memory on one server, and **Reset the week** restores it. A real shop would persist orders.
+- Each browser gets its own shop, held in memory on one server and keyed by a cookie. **Reset the week** restores only that shop, so two judges never collide. A real shop would persist orders.
 - The three buyer agents and their signing keys are built in. A real registry would come from the payment network or the merchant's onboarding.
 - Field & Grain and its customers are fictional. PayPal runs in the sandbox.
 
