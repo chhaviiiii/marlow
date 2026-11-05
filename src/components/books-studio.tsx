@@ -12,6 +12,7 @@ import {
 } from "ag-studio";
 import { useMemo } from "react";
 import type { ShopSnapshot } from "@/lib/types";
+import { useMedia } from "./use-media";
 
 const theme = studioTheme.withParams({
   backgroundColor: "#f3f6ee",
@@ -58,8 +59,9 @@ const adapter: AgLlmAdapter = {
   },
 };
 
-function report(): AgReportState {
+function report(closedPanels: boolean): AgReportState {
   return {
+    ...(closedPanels ? { panels: { ai: { collapsed: true }, edit: { collapsed: true } } } : {}),
     selectedPageId: "week",
     pages: [
       {
@@ -123,7 +125,8 @@ export default function BooksStudio({ shop }: { shop: ShopSnapshot }) {
     }),
     [shop.version, shop.ledger],
   );
-  const initialState = useMemo(() => report(), []);
+  const closedPanels = useMedia("(max-width: 1100px)");
+  const initialState = useMemo(() => report(closedPanels), [closedPanels]);
   const ai = useMemo(
     () =>
       ({ api }: { api: Parameters<typeof createAiHarness>[0] }) =>
@@ -143,6 +146,7 @@ export default function BooksStudio({ shop }: { shop: ShopSnapshot }) {
     <AgStudioProvider modules={[AgStudioAiModule]}>
       <div className="books">
         <AgStudio
+          key={closedPanels ? "closed" : "open"}
           data={data}
           initialState={initialState}
           mode="edit"
