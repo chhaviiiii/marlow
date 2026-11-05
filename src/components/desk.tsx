@@ -548,10 +548,10 @@ function PaymentSteps({ shop }: { shop: ShopSnapshot }) {
 
 function HowItWorks() {
   const steps = [
-    { title: "An agent asks", text: "A piece, who it is for, a ceiling, and a deadline." },
-    { title: "Policy prices it", text: "40% deposit. The model never sets the amount." },
-    { title: "The mandate is checked", text: "Registered agent, signed consent. Card numbers are refused." },
-    { title: "PayPal holds the deposit", text: "Capture when it ships. Refund through PayPal if needed." },
+    { title: "An agent asks", text: "It names a piece. Its signed mandate sets the ceiling and deadline." },
+    { title: "Policy prices it", text: "The deposit is 40%. The model cannot set the amount." },
+    { title: "The mandate is checked", text: "The agent must be registered and must sign. Card numbers are refused." },
+    { title: "PayPal holds the deposit", text: "The shop captures it when the piece ships. Refunds go through PayPal." },
   ];
   return (
     <div className="how">

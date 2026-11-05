@@ -92,6 +92,6 @@ export function quotePiece(piece: PricedPiece, request: QuoteRequest): QuoteDeci
     deposit,
     balance,
     margin,
-    reason: `Deposit ${Math.round(POLICY.depositRatio * 100)}%. Margin holds. Capture on ${POLICY.captureOn}.`,
+    reason: `Deposit ${Math.round(POLICY.depositRatio * 100)}%. Margin passes. Capture on ${POLICY.captureOn}.`,
   };
 }

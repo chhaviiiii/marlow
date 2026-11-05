@@ -16,8 +16,8 @@ export default function FloorPage() {
     <div className="page floor-page">
       <header className="top">
         <div>
-          <h1>Money moves the week</h1>
-          <p className="lede">The mill only keeps time that PayPal is backing. An unpaid hold gives way to a paid deposit.</p>
+          <h1>Workshop floor</h1>
+          <p className="lede">A PayPal hold books the mill. An unpaid hold gives way to a paid deposit.</p>
         </div>
         <p className="credit">Workshop schedule in Bryntum Scheduler</p>
       </header>

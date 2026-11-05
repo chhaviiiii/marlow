@@ -153,23 +153,23 @@ export function admit(token: string, now = Date.now()): Gate {
   const claimed = displayName(mandate.agentId);
   if (containsPan(`${mandate.note} ${mandate.city} ${mandate.agentId}`)) {
     return refuse(
-      "A card number was presented. This shop does not take a PAN. A registered agent brings a bound token, or it does not buy.",
+      "A card number was presented. This shop does not take card numbers. A registered agent must present a token bound to its mandate.",
       claimed,
     );
   }
   const known = Object.hasOwn(REGISTRY, mandate.agentId) ? REGISTRY[mandate.agentId] : null;
   if (!known) {
-    return refuse(`${claimed} is not a registered agent. An unknown session does not get to move the mill.`, claimed);
+    return refuse(`${claimed} is not a registered agent, so it cannot book the mill.`, claimed);
   }
   if (!signatureHolds(known.publicKey, `${header}.${payload}`, Buffer.from(encodedSignature, "base64url"))) {
     return refuse(
-      `The signature does not match ${known.name}'s registered key. The mandate was altered, or it was never theirs.`,
+      `The signature does not match ${known.name}'s registered key. The mandate was changed after signing, or another key signed it.`,
     );
   }
 
   // Everything below this line is the signer's own word, so it can be trusted.
   if (!mandate.consent) {
-    return refuse("There is no consent to pay. Intent without consent is not a mandate.", known.name);
+    return refuse("There is no consent to pay. The signed mandate must say the person agreed.", known.name);
   }
   if (mandate.merchant !== MERCHANT) {
     return refuse(`This mandate was signed for ${mandate.merchant}, not for this shop.`, known.name);

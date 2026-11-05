@@ -51,7 +51,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className="rail-foot">
           {status && (
             <>
-              <div className={`pill ${status.llm ? "live" : ""}`} title="Which brain picks the tools">
+              <div className={`pill ${status.llm ? "live" : ""}`} title="What chooses the tools: the AI model or the shop rules">
                 <i />
                 {status.llm ? `AI · ${status.model}` : "AI · rules only"}
               </div>
