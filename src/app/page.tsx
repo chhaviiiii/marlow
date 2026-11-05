@@ -1,7 +1,6 @@
-import type { Metadata } from "next";
-import { Desk } from "@/components/desk";
+"use client";
 
-export const metadata: Metadata = { title: "Agent" };
+import { Desk } from "@/components/desk";
 
 export default function HomePage() {
   return <Desk />;

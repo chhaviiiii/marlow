@@ -160,6 +160,7 @@ export function Desk() {
     const node = scroller.current;
     if (!node) return;
     const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    if (!log.current?.childElementCount) return;
     if (node.scrollHeight > node.clientHeight + 1) node.scrollTo({ top: node.scrollHeight, behavior });
     else if (focusAfter.current) composer.current?.scrollIntoView({ block: "nearest", behavior });
   }, [count, running]);

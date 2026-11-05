@@ -996,6 +996,8 @@ a.floor-callout:hover { background: var(--manila-deep); }
 
 .rules { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 40px; align-items: start; }
 
+.sheet { min-width: 0; overflow-wrap: anywhere; }
+
 .sheet h2 {
   margin: 0;
   padding-bottom: 6px;
