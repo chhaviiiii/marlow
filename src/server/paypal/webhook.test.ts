@@ -387,6 +387,19 @@ test("a refund delivered ahead of its capture waits, then both apply", async () 
   assert.equal(shop.paypal?.status, "PARTIALLY_REFUNDED");
 });
 
+test("a parked refund applies when our own capture call teaches us its capture id", async () => {
+  const { book, shop } = setup(deskShop("captured"));
+  shop.paypal!.captureId = CAPTURE;
+  shop.ledger[0].captured = 336;
+  await deliver(book, shop, refunded());
+  assert.equal(shop.ledger[0].refunded, 0);
+  rememberCapture(book, ORDER, CAPTURE, "COMPLETED", 336);
+  settle(book, shop);
+  assert.equal(shop.phase, "refunded");
+  assert.equal(shop.ledger[0].refunded, 80);
+  assert.equal(book.parked.length, 0);
+});
+
 test("a capture webhook advances a shop whose button call never returned", async () => {
   const { book, shop } = setup();
   await deliver(book, shop, captured());

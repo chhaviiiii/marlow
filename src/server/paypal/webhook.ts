@@ -318,7 +318,14 @@ export function project(shop: WebhookShop, trail: Trail) {
 /** For the button routes, once their own PayPal call has returned. */
 export function settle(book: Book, shop: WebhookShop) {
   const trail = shop.paypal ? book.trails.get(shop.paypal.orderId) : undefined;
-  if (trail) project(shop, trail);
+  if (!trail) return;
+  // The call may have taught us the id a parked event was waiting for.
+  for (const event of [...book.parked]) {
+    if (findTrail(book, event.refs) !== trail) continue;
+    book.parked.splice(book.parked.indexOf(event), 1);
+    learn(book, trail, event);
+  }
+  project(shop, trail);
 }
 
 type ShopFor = (visitor: string) => WebhookShop | undefined;
