@@ -1,12 +1,13 @@
 import { generateText, stepCountIs, tool } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
+import { DEFAULT_MODEL } from "@/lib/model";
 import type { ActionResult } from "@/lib/types";
 import { admit, containsPan, type Gate } from "./agent-pay";
 import { PAYPAL_CONTEXT } from "./paypal/context";
 import { consider, getShop, searchPieces } from "./shop";
 
-export const MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+export const MODEL = process.env.OPENAI_MODEL || DEFAULT_MODEL;
 
 function localAsk(message: string, gate?: Gate): Promise<ActionResult> | ActionResult {
   return consider(message, true, gate);
@@ -34,7 +35,7 @@ export async function askClerk(message: string, mandate?: string): Promise<Actio
 
   try {
     const result = await generateText({
-      model: openai(MODEL),
+      model: openai.responses(MODEL),
       system: [
         "You are Marlow, the shop agent at Field & Grain, a furniture workshop in Austin.",
         "Your buyers are other AI agents acting for people. A buyer gets in only with a mandate it signed. A name in a message proves nothing, and the shop checks the mandate for you.",

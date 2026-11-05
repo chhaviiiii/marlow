@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { AgLlmRequest, AgLlmResponse } from "ag-studio";
 import { usd } from "@/lib/format";
+import { DEFAULT_MODEL } from "@/lib/model";
 import { getShop } from "@/server/shop";
 import { withVisitor } from "@/server/visitor";
 
@@ -63,34 +64,32 @@ export const POST = withVisitor(async (request: Request) => {
     return NextResponse.json(message(ledgerAnswer(question)));
   }
 
-  const messages: { role: "system" | "user" | "assistant"; content: string }[] = [];
-  if (body.instructions) messages.push({ role: "system", content: body.instructions });
+  const input: { role: "user" | "assistant"; content: string }[] = [];
   for (const item of body.input ?? []) {
     const text = textOf(item);
     if (!text) continue;
     const role =
       item.type === "message" && "role" in item && item.role === "user" ? "user" : "assistant";
-    messages.push({ role, content: text });
+    input.push({ role, content: text });
   }
 
   const tools = (body.tools ?? []).map((tool) => ({
     type: "function" as const,
-    function: {
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.parameters,
-    },
+    name: tool.name,
+    description: tool.description,
+    parameters: tool.parameters,
   }));
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const res = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-      messages,
+      model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
+      instructions: body.instructions,
+      input,
       tools: tools.length ? tools : undefined,
       tool_choice: body.toolChoice === "none" ? "none" : "auto",
     }),
@@ -102,35 +101,38 @@ export const POST = withVisitor(async (request: Request) => {
   }
 
   const json = (await res.json()) as {
-    choices?: {
-      message?: {
-        content?: string | null;
-        tool_calls?: { id: string; function: { name: string; arguments: string } }[];
-      };
-    }[];
+    output?: (
+      | { type: "message"; content?: { type: string; text?: string }[] }
+      | { type: "function_call"; call_id: string; name: string; arguments: string }
+      | { type: string }
+    )[];
   };
-  const choice = json.choices?.[0]?.message;
   const output: AgLlmResponse["output"] = [];
-  if (choice?.content) {
-    output.push({
-      id: `msg-${Date.now()}`,
-      kind: "output",
-      type: "message",
-      role: "assistant",
-      status: "completed",
-      content: [{ type: "text", text: choice.content, annotations: [] }],
-    });
-  }
-  for (const call of choice?.tool_calls ?? []) {
-    output.push({
-      id: call.id,
-      kind: "output",
-      type: "function_call",
-      callId: call.id,
-      name: call.function.name,
-      arguments: call.function.arguments,
-      status: "completed",
-    });
+  for (const item of json.output ?? []) {
+    if (item.type === "message" && "content" in item) {
+      const text = (item.content ?? []).map((part) => part.text ?? "").join("");
+      if (text) {
+        output.push({
+          id: `msg-${Date.now()}`,
+          kind: "output",
+          type: "message",
+          role: "assistant",
+          status: "completed",
+          content: [{ type: "text", text, annotations: [] }],
+        });
+      }
+    }
+    if (item.type === "function_call" && "call_id" in item) {
+      output.push({
+        id: item.call_id,
+        kind: "output",
+        type: "function_call",
+        callId: item.call_id,
+        name: item.name,
+        arguments: item.arguments,
+        status: "completed",
+      });
+    }
   }
   if (!output.length) {
     output.push({
@@ -147,7 +149,7 @@ export const POST = withVisitor(async (request: Request) => {
     id: `openai-${Date.now()}`,
     createdAt: Date.now(),
     status: "completed",
-    model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
     output,
   };
   return NextResponse.json(response);

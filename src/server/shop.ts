@@ -35,6 +35,7 @@ import {
   sharedBook,
 } from "./paypal/webhook";
 import { currentVisitor } from "./visitor";
+import { DEFAULT_MODEL } from "@/lib/model";
 import { emitZapier } from "./zapier";
 
 type Shop = ShopSnapshot;
@@ -58,7 +59,7 @@ function integrations(): Integration[] {
     },
     {
       name: "OpenAI",
-      state: process.env.OPENAI_API_KEY ? (process.env.OPENAI_MODEL || "gpt-4o-mini") : "rules",
+      state: process.env.OPENAI_API_KEY ? (process.env.OPENAI_MODEL || DEFAULT_MODEL) : "rules",
       detail: "The shop agent and the books agent choose tools through the Vercel AI SDK. Policy sets every price.",
     },
     {
@@ -121,7 +122,7 @@ function seed(): Shop {
     version: 1,
     mode: paypalMode(),
     llm: Boolean(process.env.OPENAI_API_KEY),
-    model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
     paypalClientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || process.env.PAYPAL_CLIENT_ID || null,
     merchant: { name: "Field & Grain", place: "Austin", week: WEEK },
     phase: "idle",
@@ -150,7 +151,7 @@ function state() {
   }
   shop.mode = paypalMode();
   shop.llm = Boolean(process.env.OPENAI_API_KEY);
-  shop.model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  shop.model = process.env.OPENAI_MODEL || DEFAULT_MODEL;
   shop.integrations = integrations();
   shop.paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || process.env.PAYPAL_CLIENT_ID || null;
   return shop;

@@ -4,7 +4,7 @@ Target length: **2:45**. Record the screen with your voice. No music.
 
 ## Before you record
 
-1. Put `OPENAI_API_KEY` in `.env.local` so the top bar reads **AI · gpt-4o-mini** and agent replies carry the **AI** badge.
+1. Put `OPENAI_API_KEY` in `.env.local` so the top bar reads **AI · gpt-6.1-terra** and agent replies carry the **AI** badge.
 2. Run the production build so no developer badges appear:
    ```bash
    npm run build && npm start

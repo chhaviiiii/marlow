@@ -1,5 +1,6 @@
 "use client";
 
+import { DEFAULT_MODEL, MODEL_LABEL } from "@/lib/model";
 import { AgStudio, AgStudioProvider } from "ag-studio-react";
 import {
   AgStudioAiModule,
@@ -133,7 +134,7 @@ export default function BooksStudio({ shop }: { shop: ShopSnapshot }) {
             { label: "Refunds", prompt: "Which orders have a refund, and how much gross is left?" },
             { label: "What is here", prompt: "What tables and fields does this dashboard have?" },
           ],
-          models: [{ id: "gpt-4o-mini", label: "GPT-4o mini" }],
+          models: [{ id: DEFAULT_MODEL, label: MODEL_LABEL }],
         }),
     [],
   );

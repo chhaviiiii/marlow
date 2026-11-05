@@ -113,9 +113,9 @@ Every step the agent took shows as a chip under its answer, green or red, or gre
 
 ## How AI is used
 
-- Shop agent (`src/server/clerk.ts`). The Vercel AI SDK runs `gpt-4o-mini` with five tools: take a request, search the catalog, authorize, capture, and refund. The model reads a request in plain words, restates it, and chooses tools. It cannot change a price. Prices come from a plain function, tested in `src/lib/policy.test.ts`, and the PayPal tools only accept a quote that policy signed. Messages written by the model carry an AI badge.
+- Shop agent (`src/server/clerk.ts`). The Vercel AI SDK runs `gpt-6.1-terra` with five tools: take a request, search the catalog, authorize, capture, and refund. The model reads a request in plain words, restates it, and chooses tools. It cannot change a price. Prices come from a plain function, tested in `src/lib/policy.test.ts`, and the PayPal tools only accept a quote that policy signed. Messages written by the model carry an AI badge.
 - Books agent (`src/app/api/studio/turn`). AG Studio's AI assistant answers questions about the PayPal ledger and redraws the dashboard on request.
-- Without a key, both agents fall back to the same tools driven by the shop's rules, so a judge can run everything with zero setup. The top bar shows which one is answering: `AI · gpt-4o-mini` or `AI · rules only`.
+- Without a key, both agents fall back to the same tools driven by the shop's rules, so a judge can run everything with zero setup. The top bar shows which one is answering: `AI · gpt-6.1-terra` or `AI · rules only`.
 
 ## Sponsor tools
 
