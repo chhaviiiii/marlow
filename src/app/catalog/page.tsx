@@ -34,26 +34,37 @@ export default function CatalogPage() {
 
   return (
     <div className="page">
-      <header className="top" style={{ paddingLeft: 0, paddingRight: 0 }}>
+      <header className="top">
         <div>
-          <p className="kicker">Catalog · Elastic search</p>
           <h1>What an agent can buy</h1>
           <p className="lede">Eight pieces, each priced by the maker. The agent quotes these numbers exactly.</p>
         </div>
+        <p className="credit">Catalog search in Elastic</p>
       </header>
       <form className="search" onSubmit={search}>
         <input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search the catalog" />
         <button className="secondary" type="submit">Search</button>
       </form>
       {note && <p className="fine">{note}</p>}
-      <div className="catalog-grid">
+      <div className="price-book">
+        <div className="book-cols" aria-hidden>
+          <span />
+          <span>Piece</span>
+          <span>Wood and size</span>
+          <span className="margin-col">Margin</span>
+          <span className="amount">Price</span>
+          <span />
+        </div>
         {shown.map((piece) => (
-          <article key={piece.id} className="card">
+          <article key={piece.id} className="piece">
             <PieceMark id={piece.id} />
-            <h3>{piece.name}</h3>
-            <p>{piece.blurb}</p>
+            <div className="piece-title">
+              <h3>{piece.name}</h3>
+              <p>{piece.blurb}</p>
+            </div>
+            <p className="piece-spec">{piece.wood} · {piece.size}</p>
+            <p className="piece-margin">{percent((piece.price - piece.cost) / piece.price)} margin</p>
             <div className="price">{usd(piece.price)}</div>
-            <p className="fine">{piece.wood} · {piece.size} · margin {percent((piece.price - piece.cost) / piece.price)}</p>
             <Link className="card-ask" href={`/?ask=${encodeURIComponent(`Quote the ${piece.name.toLowerCase()} for Juniper`)}`}>
               Ask the agent <ArrowUpRight size={14} />
             </Link>

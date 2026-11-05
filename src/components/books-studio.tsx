@@ -13,10 +13,12 @@ import { useMemo } from "react";
 import type { ShopSnapshot } from "@/lib/types";
 
 const theme = studioTheme.withParams({
-  backgroundColor: "#ffffff",
-  foregroundColor: "#001435",
-  accentColor: "#0070ba",
-  borderColor: "#e6e9eb",
+  backgroundColor: "#f3f6ee",
+  foregroundColor: "#14201a",
+  accentColor: "#003087",
+  borderColor: "#b2c4a8",
+  borderRadius: 2,
+  fontFamily: "var(--font-printed), Arial, sans-serif",
 });
 
 const adapter: AgLlmAdapter = {

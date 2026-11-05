@@ -14,12 +14,12 @@ export default function FloorPage() {
   const desk = shop.events.find((event) => event.id === "desk-mill");
   return (
     <div className="page floor-page">
-      <header className="top" style={{ paddingLeft: 0, paddingRight: 0 }}>
+      <header className="top">
         <div>
-          <p className="kicker">Bryntum Scheduler · Field &amp; Grain workshop</p>
           <h1>Money moves the week</h1>
           <p className="lede">The mill only keeps time that PayPal is backing. An unpaid hold gives way to a paid deposit.</p>
         </div>
+        <p className="credit">Workshop schedule in Bryntum Scheduler</p>
       </header>
       {desk ? (
         <div className="floor-callout paid">
