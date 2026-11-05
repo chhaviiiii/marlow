@@ -137,7 +137,7 @@ The server calls use the official **PayPal Server SDK** (`@paypal/paypal-server-
 
 ## Deploy
 
-**Render.** New → Blueprint → pick this repo. `render.yaml` creates the web service on the free plan and asks for `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, and `OPENAI_API_KEY`. Other tool keys can be added in the service's Environment tab. To expire unpaid holds on a schedule, add a Render cron job that runs `node scripts/sweep.mjs` with `MARLOW_URL` set to the service URL.
+**Render.** New → Blueprint → pick this repo. `render.yaml` creates the web service on the Starter plan (change `plan: starter` to `plan: free` to run it at no cost; free services sleep when idle) and asks for `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, and `OPENAI_API_KEY`. Other tool keys can be added in the service's Environment tab. To expire unpaid holds on a schedule, add a Render cron job that runs `node scripts/sweep.mjs` with `MARLOW_URL` set to the service URL.
 
 **Docker.** `docker build -t marlow . && docker run -p 3000:3000 --env-file .env.local marlow`
 
