@@ -4,13 +4,13 @@ import { useState } from "react";
 import { useShop } from "@/components/use-shop";
 
 const RULES = [
-  ["Agent", "Must be registered. Unknown sessions are refused before any price leaves the shop."],
+  ["Agent", "Must be registered and must sign with its own key. A name in a message proves nothing."],
   ["Consent", "The mandate is signed to this city, ceiling, and delivery date. Any change breaks the signature."],
   ["Card numbers", "Refused and masked. The credential is a token bound to the mandate."],
   ["Deposit", "40%, authorized on PayPal before the mill is promised."],
   ["Capture", "Only when the van is loaded."],
   ["Margin", "Refuse anything under 8%."],
-  ["Ceiling", "Never quote above the buyer's number."],
+  ["Ceiling", "Never quote above the ceiling in the signed mandate. A number in a message changes nothing."],
   ["Refund", "Only against a captured PayPal payment."],
   ["Price", "Set by the policy function. The model repeats it."],
 ] as const;

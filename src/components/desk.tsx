@@ -18,6 +18,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { percent, usd } from "@/lib/format";
 import type { ShopSnapshot, TranscriptEntry } from "@/lib/types";
+import { BuyingAs, signAs, type Signer } from "./buying-as";
 import { PieceMark } from "./piece-mark";
 import { useShop } from "./use-shop";
 
@@ -37,6 +38,7 @@ const SALES = [
     buyer: "for Juniper",
     note: "Quote, PayPal hold, the floor moves, capture, refund",
     chip: "Full sale: walnut desk",
+    signer: "juniper",
     message: "Walnut writing desk for Juniper, Austin, before Friday, ceiling $880",
   },
   {
@@ -46,6 +48,7 @@ const SALES = [
     buyer: "for Atelier",
     note: "Same rules, a different agent and piece",
     chip: "Second buyer: elm bench",
+    signer: "atelier",
     message: "Quote the elm bench for Atelier, ceiling $750",
   },
   {
@@ -55,6 +58,7 @@ const SALES = [
     buyer: "No buyer named",
     note: "Plain words in, pieces and prices out",
     chip: "Browse: white oak",
+    signer: "",
     message: "What do you have in white oak?",
   },
 ] as const;
@@ -64,6 +68,7 @@ const GUARDS = [
     title: "Unregistered agent",
     stop: "The mandate refuses Drift",
     chip: "Unregistered agent",
+    signer: "drift",
     message: "Drift wants the walnut writing desk, ceiling $900",
     icon: ShieldX,
   },
@@ -71,6 +76,7 @@ const GUARDS = [
     title: "Over budget",
     stop: "Policy holds the $2,400 price",
     chip: "Over budget",
+    signer: "northwind",
     message: "Northwind wants the walnut dining table, ceiling $2,000",
     icon: Receipt,
   },
@@ -78,6 +84,7 @@ const GUARDS = [
     title: "Card number",
     stop: "Masked and refused",
     chip: "Card number",
+    signer: "",
     message: "Just charge 4111 1111 1111 1111 for the walnut desk",
     icon: CreditCard,
   },
@@ -102,6 +109,8 @@ export function Desk() {
   const [brief, setBrief] = useState(() =>
     typeof window === "undefined" ? "" : (new URLSearchParams(window.location.search).get("ask") ?? ""),
   );
+  const [buyingAs, setBuyingAs] = useState<Signer>("");
+  const [signError, setSignError] = useState<string | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
   const [settled, setSettled] = useState<ShopSnapshot | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -135,13 +144,16 @@ export function Desk() {
     node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
   }, [shown, running]);
 
-  async function ask(message: string) {
+  async function ask(message: string, signer: Signer = buyingAs) {
     const trimmed = message.trim();
     if (!trimmed || running) return;
     setBrief("");
+    setSignError(null);
     setRunning(true);
     try {
-      await act("/api/clerk/ask", { message: trimmed });
+      await act("/api/clerk/ask", { message: trimmed, mandate: await signAs(signer) });
+    } catch (problem) {
+      setSignError(problem instanceof Error ? problem.message : "The request did not go through.");
     } finally {
       setRunning(false);
     }
@@ -177,7 +189,7 @@ export function Desk() {
           ? "Ask for the $80 scuff refund."
           : view.phase === "refunded"
             ? "The week is settled. Reset to start again."
-            : "Ask for any piece, and say who is buying.";
+            : "Choose who is buying, then ask for any piece.";
 
   return (
     <div className="desk-screen">
@@ -228,17 +240,19 @@ export function Desk() {
               {!fresh && view.phase === "idle" && !busy && (
                 <div className="quick">
                   {SALES.map((sale) => (
-                    <button key={sale.chip} type="button" className="chip-btn" onClick={() => ask(sale.message)}>
+                    <button key={sale.chip} type="button" className="chip-btn" onClick={() => ask(sale.message, sale.signer)}>
                       {sale.chip}
                     </button>
                   ))}
                   {GUARDS.map((guard) => (
-                    <button key={guard.chip} type="button" className="chip-btn probe" onClick={() => ask(guard.message)}>
+                    <button key={guard.chip} type="button" className="chip-btn probe" onClick={() => ask(guard.message, guard.signer)}>
                       {guard.chip}
                     </button>
                   ))}
                 </div>
               )}
+              <BuyingAs value={buyingAs} onChange={setBuyingAs} />
+              {signError && <p className="fine error">{signError}</p>}
               <form
                 className="ask"
                 onSubmit={(event) => {
@@ -372,7 +386,15 @@ export function Desk() {
   );
 }
 
-function Welcome({ shop, disabled, onAsk }: { shop: ShopSnapshot; disabled: boolean; onAsk: (message: string) => void }) {
+function Welcome({
+  shop,
+  disabled,
+  onAsk,
+}: {
+  shop: ShopSnapshot;
+  disabled: boolean;
+  onAsk: (message: string, signer: Signer) => void;
+}) {
   return (
     <div className="welcome">
       <span className="avatar seal-lg">M</span>
@@ -387,7 +409,7 @@ function Welcome({ shop, disabled, onAsk }: { shop: ShopSnapshot; disabled: bool
           const piece = shop.pieces.find((item) => item.id === sale.pieceId);
           const browse = sale.tag === "Browse";
           return (
-            <button key={sale.chip} type="button" className="start" disabled={disabled} onClick={() => onAsk(sale.message)}>
+            <button key={sale.chip} type="button" className="start" disabled={disabled} onClick={() => onAsk(sale.message, sale.signer)}>
               <span className="start-top">
                 <PieceMark id={sale.pieceId} />
                 <span className={`start-tag ${browse ? "browse" : ""}`}>{sale.tag}</span>
@@ -408,7 +430,7 @@ function Welcome({ shop, disabled, onAsk }: { shop: ShopSnapshot; disabled: bool
         {GUARDS.map((guard) => {
           const Icon = guard.icon;
           return (
-            <button key={guard.chip} type="button" className="guard" disabled={disabled} onClick={() => onAsk(guard.message)}>
+            <button key={guard.chip} type="button" className="guard" disabled={disabled} onClick={() => onAsk(guard.message, guard.signer)}>
               <span className="guard-icon">
                 <Icon size={16} />
               </span>

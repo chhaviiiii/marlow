@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test src/lib/policy.test.ts src/server/agent-pay.test.ts"
+    "test": "node --experimental-strip-types --test src/lib/policy.test.ts src/buyer/mandate.test.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.83",

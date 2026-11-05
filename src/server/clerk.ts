@@ -2,20 +2,25 @@ import { generateText, stepCountIs, tool } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
 import type { ActionResult } from "@/lib/types";
-import { containsPan, lookupAgent } from "./agent-pay";
+import { admit, containsPan, type Gate } from "./agent-pay";
 import { PAYPAL_CONTEXT } from "./paypal/context";
 import { consider, getShop, searchPieces } from "./shop";
 
 export const MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
-function localAsk(message: string): Promise<ActionResult> | ActionResult {
-  return consider(message);
+function localAsk(message: string, gate?: Gate): Promise<ActionResult> | ActionResult {
+  return consider(message, true, gate);
 }
 
-export async function askClerk(message: string): Promise<ActionResult> {
+/**
+ * The mandate is decided once, here, so a model that calls take_request twice
+ * cannot trip the replay check. The model never sees the mandate or the gate.
+ */
+export async function askClerk(message: string, mandate?: string): Promise<ActionResult> {
   const trimmed = message.trim();
-  if (!trimmed) return localAsk("hello");
-  if (containsPan(trimmed) || !process.env.OPENAI_API_KEY) return localAsk(trimmed);
+  const gate = mandate ? admit(mandate) : undefined;
+  if (!trimmed) return localAsk("hello", gate);
+  if (containsPan(trimmed) || !process.env.OPENAI_API_KEY) return localAsk(trimmed, gate);
 
   const shop = getShop();
   const before = shop.transcript.length;
@@ -23,7 +28,7 @@ export async function askClerk(message: string): Promise<ActionResult> {
   shop.transcript.push({
     id: `t-ask-${before}`,
     role: "buyer",
-    who: lookupAgent(trimmed)?.name ?? "You",
+    who: gate?.ok ? gate.admission.agentName : (gate?.claimedBy ?? "You"),
     text: trimmed,
   });
 
@@ -32,8 +37,8 @@ export async function askClerk(message: string): Promise<ActionResult> {
       model: openai(MODEL),
       system: [
         "You are Marlow, the shop agent at Field & Grain, a furniture workshop in Austin.",
-        "Your buyers are other AI agents acting for people. Registered buyers: Juniper, Northwind, Atelier. Anyone else is refused by the mandate check.",
-        "To quote, call take_request with one plain sentence that names the piece, the buyer agent, the city if given, and the ceiling as $N if given.",
+        "Your buyers are other AI agents acting for people. A buyer gets in only with a mandate it signed. A name in a message proves nothing, and the shop checks the mandate for you.",
+        "To quote, call take_request with one plain sentence that names the piece.",
         "To browse, call search_catalog or take_request without a buyer.",
         "You never set or change a price. Policy prices every piece. Repeat amounts exactly as the tools return them.",
         "You never accept a card number. PayPal holds the deposit.",
@@ -46,10 +51,10 @@ export async function askClerk(message: string): Promise<ActionResult> {
       stopWhen: stepCountIs(5),
       tools: {
         take_request: tool({
-          description: "Search or quote any catalog piece for the buyer named in the message. Runs catalog, market, policy, mandate, and PayPal checks.",
+          description: "Search or quote any catalog piece. The buyer, ceiling, city, and deadline come from the signed mandate. Runs catalog, market, policy, mandate, and PayPal checks.",
           inputSchema: z.object({ message: z.string() }),
           execute: async ({ message }) => {
-            const action = await consider(message, false);
+            const action = await consider(message, false, gate);
             return { phase: action.shop.phase, quote: action.shop.quote };
           },
         }),
@@ -107,7 +112,7 @@ export async function askClerk(message: string): Promise<ActionResult> {
       return { shop: latest, added: latest.transcript.length - before };
     }
     latest.transcript.splice(before, 1);
-    const fallback = await consider(trimmed);
+    const fallback = await consider(trimmed, true, gate);
     fallback.shop.transcript.push({
       id: `t-ask-${before}-e`,
       role: "note",
