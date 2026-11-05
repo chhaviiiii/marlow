@@ -215,7 +215,7 @@ export function initialTranscript(): TranscriptEntry[] {
       id: "clerk-ready",
       role: "clerk",
       who: "Agent",
-      text: "Ask for any piece and say who is buying. Shop policy sets the price, and PayPal holds the deposit for a registered agent.",
+      text: "Ask for any piece. Shop policy sets the price, and PayPal holds the deposit for a registered agent with a signed mandate.",
     },
   ];
 }

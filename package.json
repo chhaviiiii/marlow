@@ -7,13 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test src/lib/policy.test.ts src/server/agent-pay.test.ts src/server/paypal/webhook.test.ts"
+    "test": "node --experimental-strip-types --test src/lib/policy.test.ts src/buyer/mandate.test.ts src/server/mcp.test.ts src/server/paypal/webhook.test.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.83",
     "@bryntum/scheduler": "npm:@bryntum/scheduler-trial@^7.3.7",
     "@bryntum/scheduler-react": "^7.3.7",
     "@elastic/elasticsearch": "^9.5.1",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@paypal/paypal-server-sdk": "^2.5.0",
     "@paypal/react-paypal-js": "^10.6.0",
     "ag-studio-react": "^3.0.0",

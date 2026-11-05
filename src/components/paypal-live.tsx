@@ -14,10 +14,12 @@ function lastLine(shop?: ShopSnapshot) {
 
 export function PayPalLive({
   clientId,
+  base = "/api/paypal",
   onDone,
   onError,
 }: {
   clientId: string;
+  base?: string;
   onDone: () => void;
   onError: (message: string) => void;
 }) {
@@ -27,14 +29,14 @@ export function PayPalLive({
         fundingSource={FUNDING.PAYPAL}
         style={{ layout: "vertical", shape: "pill", label: "paypal", color: "blue", height: 46 }}
         createOrder={async () => {
-          const res = await fetch("/api/paypal/orders", { method: "POST" });
+          const res = await fetch(`${base}/orders`, { method: "POST" });
           const data = (await res.json()) as OrderResponse;
           if (!data.orderId) throw new Error(lastLine(data.shop) || "PayPal did not open an order.");
           onDone();
           return data.orderId;
         }}
         onApprove={async (data) => {
-          const res = await fetch("/api/paypal/authorize", {
+          const res = await fetch(`${base}/authorize`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ orderId: data.orderID }),

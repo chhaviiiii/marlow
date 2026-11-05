@@ -7,9 +7,11 @@ function dollars(n: number) {
 }
 
 type PricedPiece = {
+  id: string;
   name: string;
   price: number;
   cost: number;
+  leadDays: number;
 };
 
 /** The maker's rule. The model may propose. Only this function may price. */
@@ -19,6 +21,21 @@ export const POLICY = {
   captureOn: "ship" as const,
   currency: "USD",
 };
+
+/** The shop's calendar is this frozen demo week, not the wall clock. */
+const WEEK_START = "2026-10-05T08:00:00-05:00";
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** Friday's van, once a PayPal hold gives the desk Thursday's mill. */
+const PROMISED: Record<string, string> = { "desk-walnut": "2026-10-09T12:00:00-05:00" };
+
+export function earliestDelivery(piece: PricedPiece) {
+  const promised = PROMISED[piece.id];
+  return promised ? Date.parse(promised) : Date.parse(WEEK_START) + piece.leadDays * DAY_MS;
+}
+
+function day(ms: number) {
+  return new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/Chicago" });
+}
 
 export type QuoteRequest = {
   ceiling: number;
@@ -52,6 +69,13 @@ export function quotePiece(piece: PricedPiece, request: QuoteRequest): QuoteDeci
     return {
       ok: false,
       reason: `${piece.name} is ${dollars(piece.price)}, above the buyer's ceiling of ${dollars(request.ceiling)}.`,
+    };
+  }
+  const arrives = earliestDelivery(piece);
+  if (arrives > Date.parse(request.needBy)) {
+    return {
+      ok: false,
+      reason: `${piece.name} cannot arrive before ${day(arrives)}, after the buyer's signed deadline of ${day(Date.parse(request.needBy))}.`,
     };
   }
   if (margin < POLICY.minMargin) {
