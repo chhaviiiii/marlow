@@ -4,13 +4,13 @@ import { useState } from "react";
 import { useShop } from "@/components/use-shop";
 
 const RULES = [
-  ["Agent", "Must be registered. Unknown sessions are refused before any price leaves the shop."],
+  ["Agent", "Must be registered and must sign with its own key. A name in a message proves nothing."],
   ["Consent", "The mandate is signed to this city, ceiling, and delivery date. Any change breaks the signature."],
   ["Card numbers", "Refused and masked. The credential is a token bound to the mandate."],
   ["Deposit", "40%, authorized on PayPal before the mill is promised."],
   ["Capture", "Only when the van is loaded."],
   ["Margin", "Refuse anything under 8%."],
-  ["Ceiling", "Never quote above the buyer's number."],
+  ["Ceiling", "Never quote above the ceiling in the signed mandate. A number in a message changes nothing."],
   ["Refund", "Only against a captured PayPal payment."],
   ["Price", "Set by the policy function. The model repeats it."],
 ] as const;
@@ -20,32 +20,39 @@ const LIVE = new Set(["enforced", "sandbox", "loaded", "live", "configured", "ho
 export default function PermissionsPage() {
   const { shop, error } = useShop();
   const [deployNote, setDeployNote] = useState<string | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
 
   async function deploy() {
-    const res = await fetch("/api/stack/deploy", { method: "POST" });
-    const data = (await res.json()) as { note: string };
-    setDeployNote(data.note);
+    setProblem(null);
+    try {
+      const res = await fetch("/api/stack/deploy", { method: "POST" });
+      if (!res.ok) throw new Error(`Deploy returned ${res.status}`);
+      const data = (await res.json()) as { note: string };
+      setDeployNote(data.note);
+    } catch {
+      setProblem("The deploy check did not go through. Try again.");
+    }
   }
 
-  if (error) return <p className="page">{error}</p>;
+  if (error) return <p className="page" role="alert">{error}</p>;
   if (!shop) return <p className="page loading">Opening the rules…</p>;
 
   return (
     <div className="page">
-      <header className="top" style={{ paddingLeft: 0, paddingRight: 0 }}>
+      <header className="top">
         <div>
-          <p className="kicker">What the agent may do</p>
-          <h1>Rules and wiring</h1>
+          <h1>What the agent may do</h1>
           <p className="lede">
             Anyone can ask. Only a registered agent with signed consent can move PayPal. Card numbers are refused.
           </p>
         </div>
         <button className="secondary" type="button" onClick={deploy}>Check the Astropods deploy</button>
       </header>
-      {deployNote && <p className="fine">{deployNote}</p>}
+      <p className="fine live-note" role="status">{deployNote}</p>
+      <p className="fine error live-note" role="alert">{problem}</p>
       <div className="rules">
-        <section className="card">
-          <p className="eyebrow">Shop policy</p>
+        <section className="sheet">
+          <h2>Shop policy</h2>
           <ul className="rule-list">
             {RULES.map(([name, text]) => (
               <li key={name}>
@@ -55,8 +62,8 @@ export default function PermissionsPage() {
             ))}
           </ul>
         </section>
-        <section className="card">
-          <p className="eyebrow">Live wiring</p>
+        <section className="sheet">
+          <h2>Live wiring</h2>
           <div className="stack">
             {shop.integrations.map((item) => (
               <div key={item.name}>

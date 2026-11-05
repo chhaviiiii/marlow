@@ -5,7 +5,7 @@ import {
   OrdersController,
   PaymentsController,
 } from "@paypal/paypal-server-sdk";
-import { moneyString } from "@/lib/format";
+import { moneyString, paypalText } from "@/lib/format";
 import { contextSummary } from "./context";
 
 export function paypalConfigured() {
@@ -57,10 +57,26 @@ async function accessToken() {
   return json.access_token;
 }
 
+/** Returns false when PayPal refuses the signature. Throws when PayPal cannot answer. */
+export async function verifyWebhookSignature(body: string) {
+  const token = await accessToken();
+  const res = await fetch(`${apiBase()}/v1/notifications/verify-webhook-signature`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body,
+  });
+  if (res.status >= 500) throw new Error(`PayPal verify failed (${res.status}).`);
+  if (!res.ok) return false;
+  const json = (await res.json()) as { verification_status?: string };
+  return json.verification_status === "SUCCESS";
+}
+
 export async function createDepositOrder(input: {
   amount: number;
   description: string;
   customId: string;
+  /** The name PayPal shows at approval. The money still goes to the one app behind these keys. */
+  brandName?: string;
 }) {
   const { orders } = controllers();
   const { result } = await orders.createOrder({
@@ -76,6 +92,7 @@ export async function createDepositOrder(input: {
           },
         },
       ],
+      ...(input.brandName ? { applicationContext: { brandName: paypalText(input.brandName) } } : {}),
     },
     paypalRequestId: crypto.randomUUID(),
     prefer: "return=representation",
@@ -133,6 +150,7 @@ export async function createBalanceInvoice(input: {
   amount: number;
   piece: string;
   buyer: string;
+  merchantName?: string;
 }) {
   const token = await accessToken();
   const merchantEmail = process.env.PAYPAL_MERCHANT_EMAIL || "merchant@fieldandgrain.test";
@@ -151,7 +169,9 @@ export async function createBalanceInvoice(input: {
         memo: contextSummary(),
       },
       invoicer: {
-        name: { given_name: "Field", surname: "Grain" },
+        ...(input.merchantName
+          ? { business_name: input.merchantName.slice(0, 300) }
+          : { name: { given_name: "Field", surname: "Grain" } }),
         email_address: merchantEmail,
       },
       primary_recipients: [

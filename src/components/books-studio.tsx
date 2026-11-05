@@ -1,5 +1,6 @@
 "use client";
 
+import { DEFAULT_MODEL, MODEL_LABEL } from "@/lib/model";
 import { AgStudio, AgStudioProvider } from "ag-studio-react";
 import {
   AgStudioAiModule,
@@ -11,12 +12,15 @@ import {
 } from "ag-studio";
 import { useMemo } from "react";
 import type { ShopSnapshot } from "@/lib/types";
+import { useMedia } from "./use-media";
 
 const theme = studioTheme.withParams({
-  backgroundColor: "#ffffff",
-  foregroundColor: "#001435",
-  accentColor: "#0070ba",
-  borderColor: "#e6e9eb",
+  backgroundColor: "#f3f6ee",
+  foregroundColor: "#14201a",
+  accentColor: "#003087",
+  borderColor: "#b2c4a8",
+  borderRadius: 2,
+  fontFamily: "var(--font-printed), Arial, sans-serif",
 });
 
 const adapter: AgLlmAdapter = {
@@ -55,8 +59,9 @@ const adapter: AgLlmAdapter = {
   },
 };
 
-function report(): AgReportState {
+function report(closedPanels: boolean): AgReportState {
   return {
+    ...(closedPanels ? { panels: { ai: { collapsed: true }, edit: { collapsed: true } } } : {}),
     selectedPageId: "week",
     pages: [
       {
@@ -120,7 +125,8 @@ export default function BooksStudio({ shop }: { shop: ShopSnapshot }) {
     }),
     [shop.version, shop.ledger],
   );
-  const initialState = useMemo(() => report(), []);
+  const closedPanels = useMedia("(max-width: 1100px)");
+  const initialState = useMemo(() => report(closedPanels), [closedPanels]);
   const ai = useMemo(
     () =>
       ({ api }: { api: Parameters<typeof createAiHarness>[0] }) =>
@@ -131,7 +137,7 @@ export default function BooksStudio({ shop }: { shop: ShopSnapshot }) {
             { label: "Refunds", prompt: "Which orders have a refund, and how much gross is left?" },
             { label: "What is here", prompt: "What tables and fields does this dashboard have?" },
           ],
-          models: [{ id: "gpt-4o-mini", label: "GPT-4o mini" }],
+          models: [{ id: DEFAULT_MODEL, label: MODEL_LABEL }],
         }),
     [],
   );
@@ -140,6 +146,7 @@ export default function BooksStudio({ shop }: { shop: ShopSnapshot }) {
     <AgStudioProvider modules={[AgStudioAiModule]}>
       <div className="books">
         <AgStudio
+          key={closedPanels ? "closed" : "open"}
           data={data}
           initialState={initialState}
           mode="edit"

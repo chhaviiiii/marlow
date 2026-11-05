@@ -9,17 +9,17 @@ const FloorScheduler = dynamic(() => import("@/components/floor-scheduler"), { s
 
 export default function FloorPage() {
   const { shop, error } = useShop();
-  if (error) return <p className="page">{error}</p>;
+  if (error) return <p className="page" role="alert">{error}</p>;
   if (!shop) return <p className="page loading">Opening the floor…</p>;
   const desk = shop.events.find((event) => event.id === "desk-mill");
   return (
     <div className="page floor-page">
-      <header className="top" style={{ paddingLeft: 0, paddingRight: 0 }}>
+      <header className="top">
         <div>
-          <p className="kicker">Bryntum Scheduler · Field &amp; Grain workshop</p>
-          <h1>Money moves the week</h1>
-          <p className="lede">The mill only keeps time that PayPal is backing. An unpaid hold gives way to a paid deposit.</p>
+          <h1>Workshop floor</h1>
+          <p className="lede">A PayPal hold books the mill. An unpaid hold gives way to a paid deposit.</p>
         </div>
+        <p className="credit">Workshop schedule in Bryntum Scheduler</p>
       </header>
       {desk ? (
         <div className="floor-callout paid">
@@ -34,7 +34,7 @@ export default function FloorPage() {
           <CalendarClock size={20} />
           <span>
             <b>Thursday&apos;s mill is held for an unpaid stool.</b> Quote the walnut desk for Juniper and approve the
-            deposit in PayPal. This week rewrites itself.
+            deposit in PayPal to see the schedule change.
           </span>
           <ArrowUpRight size={18} />
         </Link>
