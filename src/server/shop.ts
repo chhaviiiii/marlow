@@ -46,12 +46,12 @@ function integrations(): Integration[] {
       name: "Mandate",
       state: "enforced",
       detail:
-        "Registered agent, signed consent, and a token bound to that mandate. A card number is refused. PayPal is the payment rail.",
+        "Needs a registered agent, signed consent, and a token bound to that mandate. Card numbers are refused. PayPal handles the payment.",
     },
     {
       name: "OpenAI",
       state: process.env.OPENAI_API_KEY ? (process.env.OPENAI_MODEL || "gpt-4o-mini") : "rules",
-      detail: "The shop agent and the books agent choose tools through the Vercel AI SDK. Policy still sets every amount.",
+      detail: "The shop agent and the books agent choose tools through the Vercel AI SDK. Policy sets every price.",
     },
     {
       name: "PayPal",
@@ -81,12 +81,12 @@ function integrations(): Integration[] {
     {
       name: "AG Studio",
       state: "books",
-      detail: "The same ledger, as a dashboard the merchant can redraw.",
+      detail: "A dashboard over the PayPal ledger that the merchant can redraw.",
     },
     {
       name: "Kernel",
       state: process.env.KERNEL_API_KEY ? "live" : "rehearsal",
-      detail: "Opens the comparable listing before the quote is allowed out.",
+      detail: "Opens the comparable listing before the quote goes out.",
     },
     {
       name: "Zapier",
@@ -247,7 +247,7 @@ export async function consider(message: string, echo = true): Promise<ActionResu
     say(shop, {
       role: "clerk",
       who: "Agent",
-      text: "I don't take card numbers. A registered agent with a signed mandate is the only way in.",
+      text: "I don't take card numbers. To buy here, you need a registered agent with a signed mandate.",
     });
     bump(shop);
     return result(shop, before);
@@ -341,14 +341,14 @@ export async function consider(message: string, echo = true): Promise<ActionResu
         tool: "Channel3",
         sample: !market.live,
         text: market.live
-          ? `The market is ${usd(low)} to ${usd(high)}. ${usd(top.price)} holds.`
-          : `Sample comps, not a live search: ${usd(low)} to ${usd(high)}. ${usd(top.price)} holds.`,
+          ? `Market comps run ${usd(low)} to ${usd(high)}. The price stays at ${usd(top.price)}.`
+          : `Sample comps, not a live search: ${usd(low)} to ${usd(high)}. The price stays at ${usd(top.price)}.`,
       });
     }
     say(shop, {
       role: "trace",
       tool: "Floor",
-      text: "Thursday's mill is an unpaid stool. A PayPal hold is what releases it.",
+      text: "Thursday's mill is held for an unpaid stool. A PayPal hold on this order releases it.",
     });
     const browser = await confirmListing(priced[0]?.url, priced[0]?.title ?? "top comp");
     say(shop, {
@@ -379,7 +379,7 @@ export async function consider(message: string, echo = true): Promise<ActionResu
     tool: "PayPal",
     ok: cleared,
     text: cleared
-      ? "Authorize the deposit only. The amount is the one policy signed."
+      ? "Authorize the deposit only, for the amount policy signed."
       : "PayPal stays closed. Nothing is held.",
   });
 
@@ -495,7 +495,7 @@ async function afterAuthorization(shop: Shop, paypal: PayPalRecord) {
         buyer: quote.buyer,
       });
       paypal.invoiceId = invoice.invoiceId;
-      invoiceNote = `Balance invoice ${invoice.invoiceId} is out for ${usd(quote.balance)}.`;
+      invoiceNote = `Balance invoice ${invoice.invoiceId} created for ${usd(quote.balance)}.`;
     } catch {
       invoiceNote = `The ${usd(quote.balance)} balance stays due on delivery.`;
     }
@@ -517,7 +517,7 @@ async function afterAuthorization(shop: Shop, paypal: PayPalRecord) {
 
   const moved =
     quote.pieceId === "desk-walnut"
-      ? "The stool is off Thursday. The mill, the finish, and Friday's van are the desk."
+      ? "The stool is off Thursday. The desk now has the mill, the finish bench, and Friday's van."
       : `${quote.pieceName} is held for ${quote.buyer}.`;
   say(shop, {
     role: "clerk",
@@ -528,7 +528,7 @@ async function afterAuthorization(shop: Shop, paypal: PayPalRecord) {
     role: "trace",
     tool: "Zapier",
     text: hook.delivered
-      ? "The departure notice is on its way."
+      ? "Zapier accepted the departure notice."
       : `Departure notice is ready. ${quote.buyer}, ${usd(quote.deposit)}.`,
   });
 }
@@ -679,7 +679,7 @@ export async function sweepHolds(): Promise<ActionResult> {
   if (released) {
     say(shop, {
       role: "note",
-      text: `Sweep released ${released} unpaid hold${released === 1 ? "" : "s"}. The floor only keeps time that PayPal is backing.`,
+      text: `Sweep released ${released} unpaid hold${released === 1 ? "" : "s"}.`,
     });
   }
   bump(shop);
