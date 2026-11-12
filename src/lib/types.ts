@@ -20,6 +20,15 @@ export type Piece = {
   blurb: string;
 };
 
+/** The maker's rule. A merchant shop runs on the wall clock; the demo runs on its frozen week. */
+export type ShopPolicy = {
+  depositRatio: number;
+  minMargin: number;
+  captureOn: "ship";
+  currency: string;
+  calendar?: "live";
+};
+
 export type FloorEvent = {
   id: string;
   resourceId: "mill" | "bench" | "finish" | "van";
@@ -94,6 +103,12 @@ export type PayPalRecord = {
   refundId?: string;
   invoiceId?: string;
   status: string;
+  /** The last thing PayPal confirmed by signed webhook. */
+  webhook?: { note: string; event: string; at: string };
+  /** Refund amounts by PayPal refund id, so none is booked twice. */
+  refunds?: Record<string, number>;
+  /** PayPal dropped this hold and the floor let go of it. */
+  released?: boolean;
 };
 
 export type Integration = {
@@ -109,10 +124,13 @@ export type ShopSnapshot = {
   model: string;
   paypalClientId: string | null;
   merchant: {
+    /** Set only on a shop a merchant created. The demo shop has no id. */
+    id?: string;
     name: string;
     place: string;
     week: string;
   };
+  policy: ShopPolicy;
   phase: Phase;
   pieces: Piece[];
   events: FloorEvent[];

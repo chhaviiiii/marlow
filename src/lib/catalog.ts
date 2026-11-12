@@ -21,7 +21,7 @@ export const PIECES: Piece[] = [
     price: 220,
     cost: 96,
     leadDays: 4,
-    blurb: "Three legs, a scooped seat. The unpaid hold on Thursday's mill.",
+    blurb: "Three legs, a scooped seat. Has an unpaid hold on Thursday's mill.",
   },
   {
     id: "table-walnut",
@@ -31,7 +31,7 @@ export const PIECES: Piece[] = [
     price: 2400,
     cost: 1280,
     leadDays: 21,
-    blurb: "Seats eight. The leaf is already with Northwind.",
+    blurb: "Seats eight. Northwind already has the leaf.",
   },
   {
     id: "chair-leather",
@@ -41,7 +41,7 @@ export const PIECES: Piece[] = [
     price: 640,
     cost: 310,
     leadDays: 9,
-    blurb: "Oak frame, vegetable-tan sling. Authorized, not yet captured.",
+    blurb: "Oak frame, vegetable-tan sling. Deposit authorized, not yet captured.",
   },
   {
     id: "bedside-oak",
@@ -61,7 +61,7 @@ export const PIECES: Piece[] = [
     price: 720,
     cost: 340,
     leadDays: 10,
-    blurb: "For the foot of a bed or a hall that needs somewhere to sit.",
+    blurb: "For the foot of a bed, or for sitting in a hall.",
   },
   {
     id: "shelf-walnut",
@@ -71,7 +71,7 @@ export const PIECES: Piece[] = [
     price: 260,
     cost: 90,
     leadDays: 5,
-    blurb: "Shipped last week. The books already know it.",
+    blurb: "Shipped last week.",
   },
   {
     id: "daybed-oak",
@@ -81,7 +81,7 @@ export const PIECES: Piece[] = [
     price: 1680,
     cost: 890,
     leadDays: 18,
-    blurb: "No mattress. A frame for a room that changes jobs.",
+    blurb: "Frame only, no mattress. For a room with more than one use.",
   },
 ];
 
@@ -215,7 +215,7 @@ export function initialTranscript(): TranscriptEntry[] {
       id: "clerk-ready",
       role: "clerk",
       who: "Agent",
-      text: "Ask for any piece and say who is buying. Policy sets the price. PayPal holds the deposit for a registered agent.",
+      text: "Ask for any piece. Shop policy sets the price, and PayPal holds the deposit for a registered agent with a signed mandate.",
     },
   ];
 }

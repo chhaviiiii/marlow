@@ -13,6 +13,15 @@ export function moneyString(n: number) {
   return money(n).toFixed(2);
 }
 
+/** PayPal refuses a brand name or a purchase unit description over 127 characters. */
+export function paypalText(text: string) {
+  return text.slice(0, 127);
+}
+
+export function depositDescription(pieceName: string, merchantName?: string) {
+  return paypalText(merchantName ? `${merchantName}: ${pieceName} deposit` : `${pieceName} deposit`);
+}
+
 export function percent(ratio: number) {
   return `${Math.round(ratio * 1000) / 10}%`;
 }

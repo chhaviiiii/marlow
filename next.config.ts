@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
     "@bryntum/scheduler",
     "@bryntum/scheduler-react",
   ],
-  serverExternalPackages: ["@elastic/elasticsearch", "@paypal/paypal-server-sdk"],
+  serverExternalPackages: ["@elastic/elasticsearch", "@paypal/paypal-server-sdk", "@modelcontextprotocol/sdk"],
 };
 
 export default nextConfig;

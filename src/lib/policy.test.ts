@@ -14,7 +14,7 @@ const desk = {
 };
 
 test("quotes a deposit inside the ceiling and the margin floor", () => {
-  const decision = quotePiece(desk, { ceiling: 880, needBy: "2026-10-09" });
+  const decision = quotePiece(desk, { ceiling: 880, needBy: "2026-10-09T12:00:00-05:00" });
   assert.equal(decision.ok, true);
   if (!decision.ok) return;
   assert.equal(decision.deposit, 336);
@@ -23,8 +23,21 @@ test("quotes a deposit inside the ceiling and the margin floor", () => {
 });
 
 test("refuses a piece above the buyer's ceiling", () => {
-  const decision = quotePiece(desk, { ceiling: 700, needBy: "2026-10-09" });
+  const decision = quotePiece(desk, { ceiling: 700, needBy: "2026-10-09T12:00:00-05:00" });
   assert.equal(decision.ok, false);
+});
+
+test("refuses a piece that cannot arrive by the buyer's deadline", () => {
+  const decision = quotePiece(desk, { ceiling: 880, needBy: "2026-10-08T12:00:00-05:00" });
+  assert.equal(decision.ok, false);
+  if (decision.ok) return;
+  assert.match(decision.reason, /cannot arrive before Oct 9/);
+});
+
+test("counts lead days from the demo week for pieces with no promised slot", () => {
+  const bench = { ...desk, id: "bench-elm", name: "Bench, elm", price: 720, cost: 340, leadDays: 10 };
+  assert.equal(quotePiece(bench, { ceiling: 750, needBy: "2026-10-14T12:00:00-05:00" }).ok, false);
+  assert.equal(quotePiece(bench, { ceiling: 750, needBy: "2026-10-31T17:00:00-05:00" }).ok, true);
 });
 
 test("reads a ceiling written with a dollar sign", () => {

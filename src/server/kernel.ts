@@ -4,7 +4,7 @@ export async function confirmListing(url: string | undefined, label: string) {
     return {
       live: false,
       note: url
-        ? `Kernel rehearsal. Would open “${label}” and read the price before the quote leaves the shop.`
+        ? `Kernel rehearsal. Would open "${label}" and read the price before the quote goes out.`
         : `Kernel rehearsal. No public listing URL on the top comp, so the clerk cites the price without a browser.`,
       sessionId: null as string | null,
       liveViewUrl: null as string | null,

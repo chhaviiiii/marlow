@@ -38,7 +38,7 @@ export async function findComps(query: string): Promise<{ comps: Comp[]; live: b
     return {
       comps: FIXTURES,
       live: false,
-      note: "Channel3 key not set. Comps are a fixture in the same shape the API returns, so the quote still has a market.",
+      note: "Channel3 key not set. The quote uses fixture comps in the same shape the API returns.",
     };
   }
   const res = await fetch("https://api.trychannel3.com/v1/search", {

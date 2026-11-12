@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "src/lib/policy.test.ts", "src/server/agent-pay.test.ts"]
+  "exclude": ["node_modules", "src/lib/policy.test.ts", "src/buyer/mandate.test.ts", "src/server/mcp.test.ts", "src/server/paypal/webhook.test.ts", "src/lib/merchant-sheet.test.ts", "src/server/merchants.test.ts"]
 }

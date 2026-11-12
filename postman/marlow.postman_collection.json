@@ -5,7 +5,14 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:3000" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "merchantId",
+      "value": ""
+    }
   ],
   "item": [
     {
@@ -13,11 +20,17 @@
       "item": [
         {
           "name": "Get shop",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/shop" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/shop"
+          }
         },
         {
           "name": "Reset week",
-          "request": { "method": "POST", "url": "{{baseUrl}}/api/shop" }
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/shop"
+          }
         }
       ]
     },
@@ -25,21 +38,28 @@
       "name": "Clerk",
       "item": [
         {
-          "name": "Open Friday",
-          "request": { "method": "POST", "url": "{{baseUrl}}/api/clerk/friday" }
-        },
-        {
           "name": "Ask",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"message\": \"Walnut writing desk for Friday, ceiling 880.\"\n}" },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Walnut writing desk for Juniper.\",\n  \"mandate\": \"<compact JWS signed by the buyer. Without it the buy is refused>\"\n}"
+            },
             "url": "{{baseUrl}}/api/clerk/ask"
           }
         },
         {
           "name": "Sweep unpaid holds",
-          "request": { "method": "POST", "url": "{{baseUrl}}/api/clerk/sweep" }
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/clerk/sweep"
+          }
         }
       ]
     },
@@ -48,24 +68,41 @@
       "item": [
         {
           "name": "Create deposit order",
-          "request": { "method": "POST", "url": "{{baseUrl}}/api/paypal/orders" }
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/paypal/orders"
+          }
         },
         {
           "name": "Authorize deposit",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"\"\n}" },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"\"\n}"
+            },
             "url": "{{baseUrl}}/api/paypal/authorize"
           }
         },
         {
           "name": "Capture deposit",
-          "request": { "method": "POST", "url": "{{baseUrl}}/api/paypal/capture" }
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/paypal/capture"
+          }
         },
         {
           "name": "Refund scuff",
-          "request": { "method": "POST", "url": "{{baseUrl}}/api/paypal/refund" }
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/paypal/refund"
+          }
         }
       ]
     },
@@ -73,18 +110,91 @@
       "name": "Catalog search",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": { "mode": "raw", "raw": "{\n  \"query\": \"walnut writing desk\"\n}" },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"walnut writing desk\"\n}"
+        },
         "url": "{{baseUrl}}/api/catalog/search"
       }
     },
     {
       "name": "Zapier sample hook",
-      "request": { "method": "GET", "url": "{{baseUrl}}/api/hooks/sample" }
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/hooks/sample"
+      }
     },
     {
       "name": "Astropods deploy check",
-      "request": { "method": "POST", "url": "{{baseUrl}}/api/stack/deploy" }
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/stack/deploy"
+      }
+    },
+    {
+      "name": "MCP tools/list",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"tools/list\"\n}"
+        },
+        "url": "{{baseUrl}}/api/mcp"
+      }
+    },
+    {
+      "name": "Set up a shop",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Harbor Joinery\",\n  \"city\": \"Portland\",\n  \"depositPercent\": \"30\",\n  \"minMarginPercent\": \"35\",\n  \"catalog\": \"name,price,cost,lead days\\nOak stool,240,110,5\\n\"\n}"
+        },
+        "url": "{{baseUrl}}/api/merchants"
+      }
+    },
+    {
+      "name": "MCP tools/list for a created shop",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"tools/list\"\n}"
+        },
+        "url": "{{baseUrl}}/api/mcp/{{merchantId}}"
+      }
     }
   ]
 }

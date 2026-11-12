@@ -1,20 +1,21 @@
 import { WEEK, initialEvents, initialLedger, initialTranscript, PIECES } from "@/lib/catalog";
-import { money, moneyString, percent, usd } from "@/lib/format";
-import { parseCeiling, POLICY, quotePiece } from "@/lib/policy";
+import { depositDescription, money, moneyString, percent, usd } from "@/lib/format";
+import { earliestDelivery, parseCeiling, POLICY, quotePiece } from "@/lib/policy";
+import type { Merchant } from "./merchants";
 import type {
   ActionResult,
   FloorEvent,
   Integration,
   LedgerRow,
   PayPalRecord,
-  Phase,
+  Piece,
   ShopSnapshot,
   TranscriptEntry,
 } from "@/lib/types";
-import { admit, containsPan, lookupAgent, presentAgent } from "./agent-pay";
+import { agentNamedIn, containsPan, type Gate } from "./agent-pay";
 import { deployClerk } from "./astropods";
 import { findComps } from "./channel3";
-import { searchCatalog } from "./elastic";
+import { searchCatalog, searchLocal } from "./elastic";
 import { confirmListing } from "./kernel";
 import { contextSummary } from "./paypal/context";
 import {
@@ -26,7 +27,16 @@ import {
   paypalMode,
   refundCapture,
 } from "./paypal/client";
+import {
+  bookRefund,
+  rememberAuthorization,
+  rememberCapture,
+  rememberOrder,
+  settle,
+  sharedBook,
+} from "./paypal/webhook";
 import { currentVisitor } from "./visitor";
+import { DEFAULT_MODEL } from "@/lib/model";
 import { emitZapier } from "./zapier";
 
 type Shop = ShopSnapshot;
@@ -46,17 +56,19 @@ function integrations(): Integration[] {
       name: "Mandate",
       state: "enforced",
       detail:
-        "Registered agent, signed consent, and a token bound to that mandate. A card number is refused. PayPal is the payment rail.",
+        "The buyer signs each mandate with its own Ed25519 key. The shop holds public keys only and checks the signature, expiry, nonce, and signed ceiling. A card number is refused. PayPal is the payment rail.",
     },
     {
       name: "OpenAI",
-      state: process.env.OPENAI_API_KEY ? (process.env.OPENAI_MODEL || "gpt-4o-mini") : "rules",
-      detail: "The shop agent and the books agent choose tools through the Vercel AI SDK. Policy still sets every amount.",
+      state: process.env.OPENAI_API_KEY ? (process.env.OPENAI_MODEL || DEFAULT_MODEL) : "rules",
+      detail: "The shop agent and the books agent choose tools through the Vercel AI SDK. Policy sets every price.",
     },
     {
       name: "PayPal",
       state: paypalConfigured() ? "sandbox" : "rehearsal",
-      detail: "Orders v2 authorize, Payments v2 capture and refund, Invoicing v2 for the balance.",
+      detail: `Orders v2 authorize, Payments v2 capture and refund, Invoicing v2 for the balance.${
+        process.env.PAYPAL_WEBHOOK_ID ? " Signed webhooks confirm each step." : ""
+      }`,
     },
     {
       name: "API context",
@@ -81,12 +93,12 @@ function integrations(): Integration[] {
     {
       name: "AG Studio",
       state: "books",
-      detail: "The same ledger, as a dashboard the merchant can redraw.",
+      detail: "A dashboard over the PayPal ledger that the merchant can redraw.",
     },
     {
       name: "Kernel",
       state: process.env.KERNEL_API_KEY ? "live" : "rehearsal",
-      detail: "Opens the comparable listing before the quote is allowed out.",
+      detail: "Opens the comparable listing before the quote goes out.",
     },
     {
       name: "Zapier",
@@ -106,19 +118,22 @@ function integrations(): Integration[] {
   ];
 }
 
-function seed(): Shop {
+function seed(merchant?: Merchant): Shop {
   return {
     version: 1,
     mode: paypalMode(),
     llm: Boolean(process.env.OPENAI_API_KEY),
-    model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
     paypalClientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || process.env.PAYPAL_CLIENT_ID || null,
-    merchant: { name: "Field & Grain", place: "Austin", week: WEEK },
+    merchant: merchant
+      ? { id: merchant.id, name: merchant.name, place: merchant.city, week: "" }
+      : { name: "Field & Grain", place: "Austin", week: WEEK },
+    policy: merchant?.policy ?? POLICY,
     phase: "idle",
-    pieces: PIECES,
-    events: initialEvents(),
-    ledger: initialLedger(),
-    transcript: initialTranscript(),
+    pieces: merchant?.pieces ?? PIECES,
+    events: merchant ? [] : initialEvents(),
+    ledger: merchant ? [] : initialLedger(),
+    transcript: merchant ? [] : initialTranscript(),
     quote: null,
     admission: null,
     paypal: null,
@@ -140,7 +155,7 @@ function state() {
   }
   shop.mode = paypalMode();
   shop.llm = Boolean(process.env.OPENAI_API_KEY);
-  shop.model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  shop.model = process.env.OPENAI_MODEL || DEFAULT_MODEL;
   shop.integrations = integrations();
   shop.paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || process.env.PAYPAL_CLIENT_ID || null;
   return shop;
@@ -167,6 +182,25 @@ function fail(shop: Shop, before: number, text: string): ActionResult {
 
 export function getShop() {
   return state();
+}
+
+/** The shop a webhook belongs to. Never seeds one: a webhook has no visitor of its own. */
+export function visitorShop(visitor: string) {
+  return shops().get(visitor);
+}
+
+/** Gives the current key a fresh shop for this merchant. An order runs inside it. */
+export function openMerchantShop(merchant: Merchant) {
+  shops().set(currentVisitor(), seed(merchant));
+}
+
+/** True when this key has a shop. Unlike getShop, it never creates one. */
+export function hasShop() {
+  return shops().has(currentVisitor());
+}
+
+export function dropShop() {
+  shops().delete(currentVisitor());
 }
 
 export function resetShop(): ActionResult {
@@ -218,7 +252,18 @@ function buyingIntent(message: string) {
   return /\b(buy|quote|order|want|ceiling|under|friday|deliver)\b/i.test(message) || /\bfor\s+[a-z]/i.test(message);
 }
 
-export async function consider(message: string, echo = true): Promise<ActionResult> {
+/** The answer for a message that arrived with no signed mandate at all. */
+function noMandate(text: string): Gate {
+  const named = agentNamedIn(text);
+  return {
+    ok: false,
+    reason: named
+      ? `This message names ${named}, but a name in text proves nothing. ${named} must present a mandate signed with its own key. Choose it under Buying as to sign one.`
+      : "No signed mandate came with this request. Choose a registered buyer under Buying as, and PayPal can hold the deposit.",
+  };
+}
+
+export async function consider(message: string, echo = true, gate?: Gate): Promise<ActionResult> {
   const shop = state();
   const before = shop.transcript.length;
   const text = message.trim();
@@ -247,7 +292,7 @@ export async function consider(message: string, echo = true): Promise<ActionResu
     say(shop, {
       role: "clerk",
       who: "Agent",
-      text: "I don't take card numbers. A registered agent with a signed mandate is the only way in.",
+      text: "I don't take card numbers. To buy here, you need a registered agent with a signed mandate.",
     });
     bump(shop);
     return result(shop, before);
@@ -258,8 +303,7 @@ export async function consider(message: string, echo = true): Promise<ActionResu
   if (/(capture|van is loaded|\bloaded\b)/.test(q)) return captureDeposit();
   if (/(authoriz|approve|hold the deposit)/.test(q)) return authorizeDeposit();
 
-  const known = lookupAgent(text);
-  const who = known?.name ?? (/\bdrift\b/i.test(text) ? "Drift" : "You");
+  const who = gate?.ok ? gate.admission.agentName : (gate?.claimedBy ?? "You");
   if (echo) say(shop, { role: "buyer", who, text });
 
   const found = await searchCatalog(shop.pieces, text);
@@ -270,7 +314,8 @@ export async function consider(message: string, echo = true): Promise<ActionResu
     return result(shop, before);
   }
 
-  if (!buyingIntent(text)) {
+  const buying = buyingIntent(text) || (gate && !text.endsWith("?"));
+  if (!buying) {
     const shown = hits.slice(0, 4);
     const list = shown.map((piece) => `${piece.name}, ${usd(piece.price)}`).join(". ");
     const prices = shown.map((piece) => piece.price);
@@ -282,7 +327,7 @@ export async function consider(message: string, echo = true): Promise<ActionResu
     say(shop, {
       role: "clerk",
       who: "Agent",
-      text: `The shop has ${range}. Name a registered buyer, like Juniper, Northwind, or Atelier, and I will quote one.`,
+      text: `The shop has ${range}. Choose a registered buyer, like Juniper, Northwind, or Atelier, and I will quote one.`,
     });
     bump(shop);
     return result(shop, before);
@@ -292,39 +337,26 @@ export async function consider(message: string, echo = true): Promise<ActionResu
     return fail(shop, before, "A payment is already open. Reset the week to price something else.");
   }
 
-  const top = hits[0];
-  const ceiling = parseCeiling(text) ?? top.price;
-  const city = /austin/i.test(text) ? "Austin 78702" : "Austin";
-  const decision = quotePiece(top, { ceiling, needBy: "2026-10-09T12:00:00-05:00" });
-  const namedDrift = /\bdrift\b/i.test(text);
-  const presented = namedDrift
-    ? null
-    : known
-      ? presentAgent(known.agentId, {
-          ceiling,
-          city,
-          deliverBy: "2026-10-09T12:00:00-05:00",
-          consent: true,
-          note: text.slice(0, 180),
-        })
-      : null;
-  const gate = namedDrift
-    ? admit({
-        agentId: "agt_drift",
-        ceiling,
-        city,
-        deliverBy: "2026-10-09T12:00:00-05:00",
-        consent: true,
-        note: text.slice(0, 180),
-        signature: "not-a-mandate",
-      })
-    : presented
-      ? admit(presented)
-      : { ok: false as const, reason: "Name a registered agent and PayPal can hold the deposit." };
+  return offer(shop, before, hits[0], gate ?? noMandate(text), found.engine, text);
+}
+
+/** Prices one piece for one gate decision. Every term comes from the signed mandate. */
+async function offer(shop: Shop, before: number, top: Piece, gate: Gate, engine: string, text = ""): Promise<ActionResult> {
+  const signed = gate.ok ? gate.mandate : null;
+  const ceiling = signed?.ceiling ?? top.price;
+  const city = signed?.city ?? "Austin";
+  const needBy = signed?.deliverBy ?? new Date(earliestDelivery(top, shop.policy)).toISOString();
+  const decision = quotePiece(top, { ceiling, needBy }, shop.policy);
+
+  const spoken = parseCeiling(text);
+  const ignored =
+    signed && spoken !== null && spoken !== signed.ceiling
+      ? ` The ${usd(spoken)} in the message changes nothing. The signed ceiling is ${usd(signed.ceiling)}.`
+      : "";
 
   say(shop, {
     role: "trace",
-    tool: found.engine === "elastic" ? "Elastic" : "Catalog",
+    tool: engine === "elastic" ? "Elastic" : "Catalog",
     text: `${top.name}, ${usd(top.price)}.`,
   });
 
@@ -341,14 +373,14 @@ export async function consider(message: string, echo = true): Promise<ActionResu
         tool: "Channel3",
         sample: !market.live,
         text: market.live
-          ? `The market is ${usd(low)} to ${usd(high)}. ${usd(top.price)} holds.`
-          : `Sample comps, not a live search: ${usd(low)} to ${usd(high)}. ${usd(top.price)} holds.`,
+          ? `Market comps run ${usd(low)} to ${usd(high)}. The price stays at ${usd(top.price)}.`
+          : `Sample comps, not a live search: ${usd(low)} to ${usd(high)}. The price stays at ${usd(top.price)}.`,
       });
     }
     say(shop, {
       role: "trace",
       tool: "Floor",
-      text: "Thursday's mill is an unpaid stool. A PayPal hold is what releases it.",
+      text: "Thursday's mill is held for an unpaid stool. A PayPal hold on this order releases it.",
     });
     const browser = await confirmListing(priced[0]?.url, priced[0]?.title ?? "top comp");
     say(shop, {
@@ -364,14 +396,14 @@ export async function consider(message: string, echo = true): Promise<ActionResu
     tool: "Policy",
     ok: decision.ok,
     text: decision.ok
-      ? `${decision.reason} ${percent(decision.margin)} margin, above the ${POLICY.minMargin * 100}% floor.`
+      ? `${decision.reason} ${percent(decision.margin)} margin, above the ${percent(shop.policy.minMargin)} floor.`
       : decision.reason,
   });
   say(shop, {
     role: "trace",
     tool: "Mandate",
     ok: gate.ok,
-    text: gate.ok ? gate.admission.reason : gate.reason,
+    text: gate.ok ? `${gate.admission.reason}${ignored}` : gate.reason,
   });
   const cleared = decision.ok && gate.ok;
   say(shop, {
@@ -379,7 +411,7 @@ export async function consider(message: string, echo = true): Promise<ActionResu
     tool: "PayPal",
     ok: cleared,
     text: cleared
-      ? "Authorize the deposit only. The amount is the one policy signed."
+      ? "Authorize the deposit only, for the amount policy signed."
       : "PayPal stays closed. Nothing is held.",
   });
 
@@ -387,7 +419,7 @@ export async function consider(message: string, echo = true): Promise<ActionResu
     const price = decision.ok
       ? `${top.name} is ${usd(decision.gross)}. A deposit would be ${usd(decision.deposit)}.`
       : top.price > ceiling
-        ? `${decision.reason} Policy holds the price, so PayPal stays closed. Raise the ceiling to ${usd(top.price)} or ask for another piece.`
+        ? `${decision.reason} Policy holds the price, so PayPal stays closed. The buyer needs a new signed mandate with a ceiling of ${usd(top.price)}, or can ask for another piece.${ignored}`
         : decision.reason;
     say(shop, {
       role: "clerk",
@@ -424,8 +456,15 @@ export async function consider(message: string, echo = true): Promise<ActionResu
   return result(shop, before);
 }
 
-export async function openFriday(): Promise<ActionResult> {
-  return consider("Walnut writing desk for Juniper. Austin 78702. Before Friday noon. Ceiling $880.");
+/**
+ * The outside-agent path. It takes a catalog id, not free text, so nothing an
+ * agent writes can reach the authorize, capture, or refund words in consider().
+ */
+export async function quoteForAgent(pieceId: string, gate: Gate & { ok: true }): Promise<ActionResult> {
+  const shop = state();
+  const piece = shop.pieces.find((item) => item.id === pieceId);
+  if (!piece) return fail(shop, shop.transcript.length, `There is no piece with the id ${pieceId}.`);
+  return offer(shop, shop.transcript.length, piece, gate, "catalog");
 }
 
 function rehearsalId(kind: string) {
@@ -450,10 +489,12 @@ export async function createPayPalOrder(): Promise<ActionResult & { orderId?: st
   try {
     const created = await createDepositOrder({
       amount: shop.quote.deposit,
-      description: `${shop.quote.pieceName} deposit`,
+      description: depositDescription(shop.quote.pieceName, shop.merchant.id ? shop.merchant.name : undefined),
       customId: shop.quote.pieceId,
+      brandName: shop.merchant.id ? shop.merchant.name : undefined,
     });
     shop.paypal = { mode: "live", orderId: created.orderId, status: created.status };
+    rememberOrder(sharedBook(), currentVisitor(), created.orderId);
     bump(shop);
     return { ...result(shop, before), orderId: created.orderId };
   } catch (error) {
@@ -475,7 +516,7 @@ async function afterAuthorization(shop: Shop, paypal: PayPalRecord) {
     at: new Date().toISOString(),
     agent: quote.buyer,
     piece: quote.pieceName,
-    city: "Austin",
+    city: quote.city,
     gross: quote.gross,
     deposit: quote.deposit,
     captured: 0,
@@ -487,15 +528,18 @@ async function afterAuthorization(shop: Shop, paypal: PayPalRecord) {
   shop.ledger = [row, ...shop.ledger.filter((item) => item.id !== row.id)];
 
   let invoiceNote = "Balance invoice rehearsed.";
-  if (paypal.mode === "live") {
+  if (quote.balance <= 0) {
+    invoiceNote = "The deposit covers the full price.";
+  } else if (paypal.mode === "live") {
     try {
       const invoice = await createBalanceInvoice({
         amount: quote.balance,
         piece: quote.pieceName,
         buyer: quote.buyer,
+        merchantName: shop.merchant.id ? shop.merchant.name : undefined,
       });
       paypal.invoiceId = invoice.invoiceId;
-      invoiceNote = `Balance invoice ${invoice.invoiceId} is out for ${usd(quote.balance)}.`;
+      invoiceNote = `Balance invoice ${invoice.invoiceId} created for ${usd(quote.balance)}.`;
     } catch {
       invoiceNote = `The ${usd(quote.balance)} balance stays due on delivery.`;
     }
@@ -504,20 +548,23 @@ async function afterAuthorization(shop: Shop, paypal: PayPalRecord) {
     invoiceNote = `Balance invoice ${paypal.invoiceId} rehearsed for ${usd(quote.balance)}, due on delivery.`;
   }
 
-  const hook = await emitZapier({
-    event: "paypal.deposit.authorized",
-    merchant: "Field & Grain",
-    agent: quote.buyer,
-    piece: quote.pieceName,
-    amount: moneyString(quote.deposit),
-    currency: "USD",
-    paypalOrderId: paypal.orderId,
-    shipDate: "2026-10-09",
-  });
+  // The hook belongs to the demo shop, and its ship date is the demo's Friday.
+  const hook = shop.merchant.id
+    ? { delivered: false }
+    : await emitZapier({
+        event: "paypal.deposit.authorized",
+        merchant: "Field & Grain",
+        agent: quote.buyer,
+        piece: quote.pieceName,
+        amount: moneyString(quote.deposit),
+        currency: "USD",
+        paypalOrderId: paypal.orderId,
+        shipDate: "2026-10-09",
+      });
 
   const moved =
     quote.pieceId === "desk-walnut"
-      ? "The stool is off Thursday. The mill, the finish, and Friday's van are the desk."
+      ? "The stool is off Thursday. The desk now has the mill, the finish bench, and Friday's van."
       : `${quote.pieceName} is held for ${quote.buyer}.`;
   say(shop, {
     role: "clerk",
@@ -528,7 +575,7 @@ async function afterAuthorization(shop: Shop, paypal: PayPalRecord) {
     role: "trace",
     tool: "Zapier",
     text: hook.delivered
-      ? "The departure notice is on its way."
+      ? "Zapier accepted the departure notice."
       : `Departure notice is ready. ${quote.buyer}, ${usd(quote.deposit)}.`,
   });
 }
@@ -561,12 +608,16 @@ export async function authorizeDeposit(orderId?: string): Promise<ActionResult> 
     const id = orderId || shop.paypal?.orderId;
     if (!id) return fail(shop, before, "The PayPal button has to create the order before approval.");
     const authorized = await authorizeOrder(id);
+    const book = sharedBook();
+    rememberOrder(book, currentVisitor(), id);
+    rememberAuthorization(book, id, authorized.authorizationId);
     await afterAuthorization(shop, {
       mode: "live",
       orderId: id,
       authorizationId: authorized.authorizationId,
       status: authorized.status,
     });
+    settle(book, shop);
     bump(shop);
     return result(shop, before);
   } catch (error) {
@@ -586,6 +637,7 @@ export async function captureDeposit(): Promise<ActionResult> {
       const captured = await captureAuthorization(shop.paypal.authorizationId, amount);
       shop.paypal.captureId = captured.captureId;
       shop.paypal.status = captured.status ?? "COMPLETED";
+      rememberCapture(sharedBook(), shop.paypal.orderId, captured.captureId, shop.paypal.status, amount);
     } else {
       shop.paypal.captureId = rehearsalId("CAP");
       shop.paypal.status = "COMPLETED";
@@ -604,6 +656,7 @@ export async function captureDeposit(): Promise<ActionResult> {
           ? `The van is loaded. PayPal captured the ${usd(amount)} deposit. The balance stays on the invoice.`
           : `PayPal captured the ${usd(amount)} deposit. The balance stays on the invoice.`,
     });
+    settle(sharedBook(), shop);
     bump(shop);
     return result(shop, before);
   } catch (error) {
@@ -630,19 +683,7 @@ export async function refundScuff(): Promise<ActionResult> {
       shop.paypal.refundId = rehearsalId("REF");
       shop.paypal.status = "PARTIALLY_REFUNDED";
     }
-    shop.phase = "refunded";
-    shop.ledger = shop.ledger.map((row) => {
-      if (row.paypalOrderId !== shop.paypal?.orderId) return row;
-      const refunded = money(row.refunded + amount);
-      const net = row.gross - refunded;
-      const cost = row.gross * (1 - row.margin);
-      return {
-        ...row,
-        refunded,
-        status: "Partial refund",
-        margin: net <= 0 ? 0 : (net - cost) / net,
-      };
-    });
+    bookRefund(shop, shop.paypal.refundId, amount);
     say(shop, {
       role: "clerk",
       who: "Clerk",
@@ -651,6 +692,7 @@ export async function refundScuff(): Promise<ActionResult> {
           ? `The top has a scuff. ${usd(amount)} goes back on refund ${shop.paypal.refundId}. The desk still ships Friday.`
           : `${usd(amount)} goes back on refund ${shop.paypal.refundId}. The order still stands.`,
     });
+    settle(sharedBook(), shop);
     bump(shop);
     return result(shop, before);
   } catch (error) {
@@ -662,6 +704,30 @@ export async function searchPieces(query: string) {
   const shop = state();
   const found = await searchCatalog(shop.pieces, query);
   return { engine: found.engine, note: found.note, pieces: found.hits.map((hit) => hit.piece) };
+}
+
+/** Catalog search with no shop behind it, and no cost or margin in the answer. */
+export async function searchForAgent(query: string) {
+  const found = await searchCatalog(PIECES, query);
+  return found.hits.map(({ piece: { id, name, wood, size, price, leadDays, blurb } }) => ({
+    id,
+    name,
+    wood,
+    size,
+    price,
+    leadDays,
+    blurb,
+  }));
+}
+
+/** Local scoring only. The Elastic index is one shared index built from the demo catalog. */
+export function searchMerchantForAgent(merchant: Merchant, query: string) {
+  return searchLocal(merchant.pieces, query).map(({ piece: { id, name, price, leadDays } }) => ({
+    id,
+    name,
+    price,
+    leadDays,
+  }));
 }
 
 export async function sweepHolds(): Promise<ActionResult> {
@@ -679,7 +745,7 @@ export async function sweepHolds(): Promise<ActionResult> {
   if (released) {
     say(shop, {
       role: "note",
-      text: `Sweep released ${released} unpaid hold${released === 1 ? "" : "s"}. The floor only keeps time that PayPal is backing.`,
+      text: `Sweep released ${released} unpaid hold${released === 1 ? "" : "s"}.`,
     });
   }
   bump(shop);

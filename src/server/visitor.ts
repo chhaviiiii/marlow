@@ -12,6 +12,11 @@ export function currentVisitor() {
   return visitors.getStore() ?? "shared";
 }
 
+/** Runs work inside one named shop, with no cookie. Outside agents use this. */
+export function inShop<Result>(id: string, work: () => Result) {
+  return visitors.run(id, work);
+}
+
 /** Runs a route handler inside the shop that belongs to this browser. */
 export function withVisitor<Args extends unknown[], Result>(handler: (...args: Args) => Promise<Result> | Result) {
   return async (...args: Args) => {
